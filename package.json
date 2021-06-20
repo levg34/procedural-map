@@ -1,0 +1,25 @@
+{
+  "name": "procedural-map",
+  "version": "1.0.0",
+  "description": "procedural map creation",
+  "main": "index.js",
+  "scripts": {
+    "test": "mocha",
+    "compile-ts": "tsc classes.ts"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/levg34/procedural-map.git"
+  },
+  "author": "levg34",
+  "license": "SEE LICENSE IN LICENSE",
+  "bugs": {
+    "url": "https://github.com/levg34/procedural-map/issues"
+  },
+  "homepage": "https://github.com/levg34/procedural-map#readme",
+  "devDependencies": {
+    "@types/node": "^15.12.4",
+    "mocha": "^9.0.1",
+    "typescript": "^4.3.4"
+  }
+}
