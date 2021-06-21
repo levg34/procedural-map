@@ -1,6 +1,5 @@
-const { Direction, RoadPart } = require('../classes.js')
+const { Direction, RoadPart, Road } = require('../classes.js')
 const assert = require('assert')
-const { createRoad } = require('../index.js')
 
 function buildTestData() {
     return [
@@ -18,16 +17,18 @@ function buildTestData() {
 
 const testData = buildTestData()
 
+const road = new Road()
+
 describe('Road parts', function() {
     describe('create road', function() {
         it('should return an array of road parts', function() {
-            assert.ok(createRoad(testData) instanceof Array)
+            assert.ok(road.createRoad(testData) instanceof Array)
         })
         it('should use all road parts once', function() {
-            assert.strictEqual(createRoad(testData).length,testData.length)
+            assert.strictEqual(road.createRoad(testData).length,testData.length)
         })
         it('should connect ', function() {
-            assert.strictEqual(createRoad(testData).length,testData.length)
+            assert.strictEqual(road.createRoad(testData).length,testData.length)
         })
     })
 })
