@@ -1,16 +1,11 @@
 const { getRoadParts } = require('./utils')
 
 interface Model {
-    path: string,
+    url: string,
     name: string
 }
 
-enum Direction {
-    Up,
-    Down,
-    Left,
-    Right,
-}
+type Direction = '+x' | '-x' | '+y' | '-y' 
 
 class RoadPart {
     model: Model
@@ -43,7 +38,6 @@ class Road {
 }
 
 module.exports = {
-    Direction,
     RoadPart,
     Road
 }
