@@ -72,11 +72,8 @@ const loadRP = () => {
 getRoadParts().then(res => {
     models.index = 0
     models.road = res.map(e => {
-        const eUrl = '/model/'+e
-        return {
-            url: eUrl,
-            model: loadModel(eUrl)
-        }
+        e.model = loadModel(e.url)
+        return e
     })
     loadRP()
 })

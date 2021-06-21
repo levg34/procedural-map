@@ -2,10 +2,11 @@ const express = require('express')
 const app = express()
 const port = 3210
 
-const fs = require('fs')
 const path = require('path')
 
 const { Road } = require('./classes')
+
+const { getRoadParts } = require('./utils')
 
 app.use(express.static(path.join(__dirname,'public')))
 
@@ -13,18 +14,14 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname,'index.html'))
 })
 
+const road = new Road()
+
 app.get('/road', (req, res) => {
-    const road = new Road()
-    road.createRoad()
     res.json(road)
 })
 
 app.get('/road_parts', (req, res) => {
-    fs.readdir('./models/road',(err, files) => {
-        if (err) return res.json({err})
-        const models = files.filter(file => !file.endsWith('.txt')).map(file => 'road/'+file)
-        res.json(models)
-    })
+    getRoadParts().then(parts => res.json(parts)).catch(err => res.status(500).json({err}))
 })
 
 app.get('/model/:type/:model', (req, res, next) => {
