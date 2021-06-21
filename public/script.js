@@ -57,11 +57,16 @@ const loadRP = () => {
     if (models.index > 0) {
         scene.remove(models.current)
     }
-    models.road[models.index].model.then(gltf => {
-        models.current = gltf.scene
-        scene.add(gltf.scene)
-    })
-    models.index += 1
+    if (models.road[models.index] != undefined) {
+        models.road[models.index].model.then(gltf => {
+            models.current = gltf.scene
+            scene.add(gltf.scene)
+        })
+        models.index += 1
+    } else {
+        models.index = 0
+        loadRP()
+    }
 }
 
 getRoadParts().then(res => {
