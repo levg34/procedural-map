@@ -7,8 +7,11 @@
     "mocha": "mocha",
     "test": "run-s compile-ts mocha",
     "compile-ts": "tsc classes.ts",
+    "ts-watch": "tsc -w classes.ts",
     "start": "run-s compile-ts start-server",
-    "start-server": "node index.js"
+    "start-server": "node index.js",
+    "dev-server": "nodemon",
+    "dev": "run-p ts-watch dev-server"
   },
   "repository": {
     "type": "git",

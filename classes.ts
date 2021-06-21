@@ -1,6 +1,8 @@
+const { getRoadParts } = require('./utils')
+
 interface Model {
-    url: string
-    model?: object
+    path: string,
+    name: string
 }
 
 enum Direction {
@@ -23,9 +25,20 @@ class RoadPart {
 
 class Road {
     parts: RoadPart[]
-    createRoad(roadParts: RoadPart[]) {
-        this.parts = roadParts
-        return roadParts
+    path: RoadPart[]
+    constructor() {
+        this.parts = []
+        this.path = []
+        getRoadParts().then((parts: Model[]) => {
+            this.parts = parts.map((part: Model) => new RoadPart({
+                model: part,
+                directions: []
+            }))
+            this.createPath()
+        }).catch((err: string) => console.log(err))
+    }
+    createPath() {
+        this.path = this.parts
     }
 }
 
