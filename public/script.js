@@ -62,6 +62,7 @@ const loadRP = () => {
             models.current = gltf.scene
             scene.add(gltf.scene)
         })
+        console.log(models.road[models.index].name)
         models.index += 1
     } else {
         models.index = 0
