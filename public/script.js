@@ -2,6 +2,7 @@ import * as THREE from 'https://cdn.skypack.dev/three@0.129.0'
 import { OrbitControls } from 'https://cdn.skypack.dev/three@0.129.0/examples/jsm/controls/OrbitControls.js'
 import { GLTFLoader } from 'https://cdn.skypack.dev/three@0.129.0/examples/jsm/loaders/GLTFLoader.js'
 import { getRoad, getRoadParts } from './data.js'
+// import { GUI } from 'https://cdn.skypack.dev/three@0.129.0/examples/jsm/libs/dat.gui.module'
 // import { MeshPhongMaterial } from 'three'
 
 const models = {}
@@ -82,9 +83,14 @@ getRoadParts().then(res => {
             e.model = gltf
         })
     })
-    loadRP()
+    // loadRP()
     getRoad().then(res => {
-        console.log(res)
+        res.forEach((e,i) => {
+            const reToAdd = models.road.find(re => e.roadPart.name === re.name)
+            const roadPart = reToAdd.model.scene.clone()
+            roadPart.position.x += i
+            scene.add(roadPart)
+        })
     })
 })
 
