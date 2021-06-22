@@ -1,39 +1,55 @@
 const { getRoadParts } = require('./utils')
 
-interface Model {
-    url: string,
-    name: string
-}
-
 type Direction = '+x' | '-x' | '+y' | '-y' 
 
 class RoadPart {
-    model: Model
+    url: string
+    name: string
     directions: Direction[]
 
     constructor(parameters: RoadPart) {
         if (!parameters) return
         this.directions = parameters.directions instanceof Array ? parameters.directions : []
-        this.model = parameters.model
+        this.url = parameters.url
+        this.name = parameters.name
     }
+}
+
+interface LinkedRoadPart {
+    roadPart: RoadPart,
+    linkNext?: Direction
+    linkPrevious?: Direction
 }
 
 class Road {
     parts: RoadPart[]
-    path: RoadPart[]
-    constructor() {
+    path: LinkedRoadPart[]
+    constructor(length: number) {
         this.parts = []
         this.path = []
-        getRoadParts().then((parts: Model[]) => {
-            this.parts = parts.map((part: Model) => new RoadPart({
-                model: part,
-                directions: []
-            }))
-            this.createPath()
+        getRoadParts().then((parts: RoadPart[]) => {
+            this.parts = parts
+            this.createPath(length)
         }).catch((err: string) => console.log(err))
     }
-    createPath() {
-        this.path = this.parts
+    createPath(length: number) {
+        const path = []
+        path.push({
+            roadPart: this.parts.find(part => part.name === 'road_straight'),
+            linkNext: '+x'
+        })
+        for (let i=1;i<length;++i) {
+            path.push({
+                roadPart: this.parts.find(part => part.name === 'road_straight'),
+                linkNext: '+x',
+                linkPrevious: '-x'
+            })
+        }
+        delete path[length-1].linkNext
+        this.path = path
+    }
+    getPath() {
+        return this.path
     }
 }
 
