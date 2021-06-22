@@ -20,7 +20,7 @@ const controls = new OrbitControls(camera, renderer.domElement)
 const light = new THREE.AmbientLight(0x404040) // soft white light
 scene.add(light)
 
-const directionalLight = new THREE.DirectionalLight(0xffffff, 1)
+const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5)
 scene.add(directionalLight)
 
 const size = 10
@@ -54,25 +54,38 @@ const loadModel = url => {
     })
 }
 
-let ambulance
+let ambulance, headLight, headLight2
 loadModel('/model/cars/ambulance.glb').then(gltf => {
     ambulance = gltf.scene
+
     ambulance.scale.set(0.2,0.2,0.2)
     ambulance.position.set(0,0,0.9)
     ambulance.rotation.y = -Math.PI/2
-    const pointlight = new THREE.PointLight(0xffffff, 2, 5)
-    pointlight.position.set(0,0.6,-1.6)
+
+    const frontLight = new THREE.PointLight(0xffffff, 2, 5)
+    frontLight.position.set(0,0.6,-1.6)
+    ambulance.add(frontLight)
+
+    headLight = new THREE.PointLight(0x0e45ea, 2, 5)
+    headLight.position.set(-0.4,1.7,1.45)
+    ambulance.add(headLight)
+    headLight.visible = true
+
+    headLight2 = new THREE.PointLight(0x0e45ea, 2, 5)
+    headLight2.position.set(0.4,1.7,1.45)
+    ambulance.add(headLight2)
+    headLight2.visible = false
+
     // const gui = new GUI()
     // const lightFolder = gui.addFolder("Cube")
-    // lightFolder.add(pointlight.position, "x", -2, 2, 0.01)
-    // lightFolder.add(pointlight.position, "y", -2, 2, 0.01)
-    // lightFolder.add(pointlight.position, "z", -2, 2, 0.01)
+    // lightFolder.add(headLight.position, "x", -2, 2, 0.05)
+    // lightFolder.add(headLight.position, "y", -2, 2, 0.05)
+    // lightFolder.add(headLight.position, "z", -2, 2, 0.05)
 
     // const sphereSize = 0.1
-    // const pointLightHelper = new THREE.PointLightHelper(pointlight, sphereSize)
+    // const pointLightHelper = new THREE.PointLightHelper(headLight, sphereSize)
     // scene.add( pointLightHelper )
-    
-    ambulance.add(pointlight)
+
     scene.add(ambulance)
 })
 
@@ -116,6 +129,7 @@ getRoadParts().then(res => {
     })
 })
 
+let iter = 0
 const animate = function () {
 	requestAnimationFrame(animate)
     if (ambulance !== undefined) {
@@ -124,6 +138,12 @@ const animate = function () {
         } else {
             ambulance.position.x = -5
         }
+        if (iter == 30) {
+            headLight.visible = !headLight.visible
+            headLight2.visible = !headLight2.visible
+            iter = 0
+        }
+        ++iter
     }
 	renderer.render(scene, camera)
 }
