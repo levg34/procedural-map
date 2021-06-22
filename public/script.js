@@ -1,7 +1,7 @@
 import * as THREE from 'https://cdn.skypack.dev/three@0.129.0'
 import { OrbitControls } from 'https://cdn.skypack.dev/three@0.129.0/examples/jsm/controls/OrbitControls.js'
 import { GLTFLoader } from 'https://cdn.skypack.dev/three@0.129.0/examples/jsm/loaders/GLTFLoader.js'
-import { getRoadParts } from './data.js'
+import { getRoad, getRoadParts } from './data.js'
 // import { MeshPhongMaterial } from 'three'
 
 const models = {}
@@ -57,12 +57,13 @@ const loadRP = () => {
     if (models.index > 0) {
         scene.remove(models.current)
     }
-    if (models.road[models.index] != undefined) {
-        models.road[models.index].model.then(gltf => {
-            models.current = gltf.scene
-            scene.add(gltf.scene)
-        })
-        console.log(models.road[models.index].name)
+    const roadElement = models.road[models.index]
+    if (roadElement != undefined) {
+        const model = roadElement.model
+        if (model instanceof Promise) return
+        console.log(roadElement.name)
+        models.current = model.scene
+        scene.add(model.scene)
         models.index += 1
     } else {
         models.index = 0
@@ -76,7 +77,15 @@ getRoadParts().then(res => {
         e.model = loadModel(e.url)
         return e
     })
+    models.road.forEach(e => {
+        e.model.then(gltf => {
+            e.model = gltf
+        })
+    })
     loadRP()
+    getRoad().then(res => {
+        console.log(res)
+    })
 })
 
 const animate = function () {

@@ -14,10 +14,10 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname,'index.html'))
 })
 
-const road = new Road()
+const road = new Road(5)
 
 app.get('/road', (req, res) => {
-    res.json(road)
+    res.json(road.getPath())
 })
 
 app.get('/road_parts', (req, res) => {
