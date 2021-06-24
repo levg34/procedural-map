@@ -33,20 +33,25 @@ class Road {
         }).catch((err: string) => console.log(err))
     }
     createPath(length: number) {
+        this.path = this.createStraightLine(length)
+    }
+    createStraightLine(length: number) {
         const path = []
-        path.push({
-            roadPart: this.parts.find(part => part.name === 'road_straight'),
-            linkNext: '+x'
-        })
+        if (length < 2) return path
+        path.push(this.createLinkedRoadPart('road_straight',null,'+x'))
         for (let i=1;i<length;++i) {
-            path.push({
-                roadPart: this.parts.find(part => part.name === 'road_straight'),
-                linkNext: '+x',
-                linkPrevious: '-x'
-            })
+            path.push(this.createLinkedRoadPart('road_straight','-x','+x'))
         }
         delete path[length-1].linkNext
-        this.path = path
+        path[Math.floor(length/2)] = this.createLinkedRoadPart('road_crossing','-x','+x')
+        return path
+    }
+    createLinkedRoadPart(name: string, previous?: Direction, next?: Direction): LinkedRoadPart {
+        return {
+            roadPart: this.parts.find(part => part.name === name),
+            linkNext: next,
+            linkPrevious: previous
+        }
     }
     getPath() {
         return this.path

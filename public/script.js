@@ -96,7 +96,6 @@ const loadRP = () => {
     const roadElement = models.road[models.index]
     if (roadElement != undefined) {
         const model = roadElement.model
-        if (model instanceof Promise) return
         console.log(roadElement.name)
         models.current = model.scene
         scene.add(model.scene)
@@ -110,21 +109,26 @@ const loadRP = () => {
 getRoadParts().then(res => {
     models.index = 0
     models.road = res.map(e => {
-        e.model = loadModel(e.url)
+        e.modelPromise = loadModel(e.url)
         return e
     })
-    models.road.forEach(e => {
-        e.model.then(gltf => {
-            e.model = gltf
+    // models.road.forEach(e => {
+    //     e.model.then(gltf => {
+    //         e.model = gltf
+    //     })
+    // })
+    Promise.all(models.road.map(e => e.modelPromise)).then(gltfs => {
+        gltfs.forEach((gltf, index) => {
+            models.road[index].model = gltf
+            delete models.road[index].modelPromise
         })
-    })
-    // loadRP()
-    getRoad().then(res => {
-        res.forEach((e,i) => {
-            const reToAdd = models.road.find(re => e.roadPart.name === re.name)
-            const roadPart = reToAdd.model.scene.clone()
-            roadPart.position.x += i
-            scene.add(roadPart)
+        getRoad().then(res => {
+            res.forEach((e,i) => {
+                const reToAdd = models.road.find(re => e.roadPart.name === re.name)
+                const roadPart = reToAdd.model.scene.clone()
+                roadPart.position.x += i
+                scene.add(roadPart)
+            })
         })
     })
 })
@@ -156,4 +160,12 @@ document.addEventListener('keydown',event => {
             loadRP()
         }
     }
+})
+
+window.addEventListener('resize', event => {
+    if (camera === undefined || renderer === undefined) return
+    camera.aspect = window.innerWidth / window.innerHeight
+    camera.updateProjectionMatrix()
+
+    renderer.setSize(window.innerWidth, window.innerHeight)
 })
