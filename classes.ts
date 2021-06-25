@@ -2,12 +2,10 @@ import { Vector3 } from "three"
 
 const { getRoadParts } = require('./utils')
 
-type Direction = '+x' | '-x' | '+y' | '-y' 
-
 class RoadPart {
     url: string
     name: string
-    directions: Direction[]
+    directions: Vector3[]
 
     constructor(parameters: RoadPart) {
         if (!parameters) return
