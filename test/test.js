@@ -1,10 +1,9 @@
 const { Direction, RoadPart, Road } = require('../classes.js')
 const assert = require('assert')
 
-const roadLength = 5
-const road = new Road(roadLength)
-
 describe('Road parts', function() {
+    const roadLength = 5
+    const road = new Road(roadLength)
     describe('create straight line', function() {
         const straightLength = 5
         it('should return an array of road parts', function() {
@@ -19,6 +18,24 @@ describe('Road parts', function() {
         it('should contain exactly ONE road crossing', () => {
             assert.strictEqual(road.createStraightLine(straightLength).filter(e => e.roadPart.name === 'road_crossing').length, 1)
         })
+    })
+    describe('get part by name', () => {
+        const partName = 'road_crossing'
+        it ('should not be null if exists',() => {
+            assert.notStrictEqual(road.getRoadPartByName(partName),null)
+            assert.notStrictEqual(road.getRoadPartByName(partName),undefined)
+        })
+        it('should return the correct part', () => {
+            assert.strictEqual(road.getRoadPartByName(partName).name, partName)
+        })
+    })
+    describe('rotate part', () => {
+        const partName = 'road_crossing'
+        const roadPart = road.getRoadPartByName(partName)
+        it('should return the same part', () => {
+            assert.strictEqual(road.rotateRoadPart(roadPart).name,partName)
+        })
+        it('should rotate the connectors')
     })
     describe('create road', function() {
         it('should return an array of road parts', function() {

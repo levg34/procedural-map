@@ -112,11 +112,6 @@ getRoadParts().then(res => {
         e.modelPromise = loadModel(e.url)
         return e
     })
-    // models.road.forEach(e => {
-    //     e.model.then(gltf => {
-    //         e.model = gltf
-    //     })
-    // })
     Promise.all(models.road.map(e => e.modelPromise)).then(gltfs => {
         gltfs.forEach((gltf, index) => {
             models.road[index].model = gltf
