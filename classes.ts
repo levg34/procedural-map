@@ -13,6 +13,10 @@ class RoadPart {
         this.url = parameters.url
         this.name = parameters.name
     }
+
+    rotate(angle: number) {
+        this.directions = this.directions.map((direction: Vector3) => direction.applyAxisAngle(new Vector3(0,1,0),angle))
+    }
 }
 
 class LinkedRoadPart {
@@ -29,6 +33,7 @@ class LinkedRoadPart {
     }
 
     static fromObject(object: LinkedRoadPart): LinkedRoadPart {
+        if (!object) return null
         const {roadPart, position, rotation} = object
         return new LinkedRoadPart(roadPart, position, rotation)
     }
