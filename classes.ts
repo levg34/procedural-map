@@ -24,13 +24,17 @@ interface LinkedRoadPart {
 class Road {
     parts: RoadPart[]
     path: LinkedRoadPart[]
-    constructor(length: number) {
-        this.parts = []
+    static build(length: number): Promise<Road> {
+        return new Promise((resolve,reject) => {
+            getRoadParts().then((parts: RoadPart[]) => {
+                resolve(new Road(parts,length))
+            }).catch((err: string) => reject(err))
+        })
+    }
+    constructor(parts: RoadPart[], length: number) {
+        this.parts = parts
         this.path = []
-        getRoadParts().then((parts: RoadPart[]) => {
-            this.parts = parts
-            this.createPath(length)
-        }).catch((err: string) => console.log(err))
+        this.createPath(length)
     }
     createPath(length: number) {
         this.path = this.createStraightLine(length)
