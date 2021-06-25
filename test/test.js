@@ -1,7 +1,27 @@
-const { Direction, RoadPart, Road } = require('../classes.js')
+const { RoadPart, Road } = require('../classes.js')
 const assert = require('assert')
+const { getRoadParts } = require('../utils.js')
+const { Vector3 } = require('three')
 
-describe('Road parts', function() {
+describe('RoadPart', function() {
+    let part
+    before(done => {
+        getRoadParts().then(parts => {
+            part = new RoadPart(parts[11])
+            done()
+        }).catch(err => done(err))
+    })
+    it('should rotate all directions', () => {
+        const expected = [
+            new Vector3(0,0,-1),
+            new Vector3(-1,0,0)
+        ]
+        part.rotate(Math.PI/2)
+        assert.deepStrictEqual(part.directions,expected)
+    })
+})
+
+describe('Road', () => {
     const roadLength = 5
     let road = null
     before(done => {
