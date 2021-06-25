@@ -15,9 +15,23 @@ class RoadPart {
     }
 }
 
-interface LinkedRoadPart {
-    roadPart: RoadPart,
+class LinkedRoadPart {
+    roadPart: RoadPart
     position: Vector3
+    rotation?: number
+
+    constructor(roadPart: RoadPart, position: Vector3, rotation?: number) {
+        this.roadPart = roadPart
+        this.position = position
+        if (rotation || rotation === 0) {
+            this.rotation = this.rotation
+        }
+    }
+
+    static fromObject(object: LinkedRoadPart): LinkedRoadPart {
+        const {roadPart, position, rotation} = object
+        return new LinkedRoadPart(roadPart, position, rotation)
+    }
 }
 
 class Road {
@@ -41,22 +55,22 @@ class Road {
     createStraightLine(length: number) {
         const path = []
         if (length < 2) return path
-        path.push(this.createLinkedRoadPart('road_straight',new Vector3(0,0,0)))
+
+        const straight = this.getRoadPartByName('road_straight')
+        const end = this.getRoadPartByName('road_end')
+        const crossing = this.getRoadPartByName('road_crossing')
+
+        path.push(new LinkedRoadPart(straight,new Vector3(0,0,0)))
         for (let i=1;i<length;++i) {
-            path.push(this.createLinkedRoadPart('road_straight',new Vector3(i,0,0)))
+            path.push(new LinkedRoadPart(straight,new Vector3(i,0,0)))
         }
         const crossingPosition = Math.floor(length / 2)
-        path[crossingPosition] = this.createLinkedRoadPart('road_crossing',new Vector3(crossingPosition,0,0))
+        path[crossingPosition] = new LinkedRoadPart(crossing,new Vector3(crossingPosition,0,0))
+
         return path
     }
     getRoadPartByName(name: string): RoadPart {
         return this.parts.find(part => part.name === name)
-    }
-    createLinkedRoadPart(name: string, position: Vector3): LinkedRoadPart {
-        return {
-            roadPart: this.getRoadPartByName(name),
-            position
-        }
     }
     rotateRoadPart(part: RoadPart): RoadPart {
         return part
