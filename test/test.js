@@ -3,7 +3,13 @@ const assert = require('assert')
 
 describe('Road parts', function() {
     const roadLength = 5
-    const road = new Road(roadLength)
+    let road = null
+    before(done => {
+        Road.build(roadLength).then(res => {
+            road = res
+            done()
+        }).catch(err => done(err))
+    })
     describe('create straight line', function() {
         const straightLength = 5
         it('should return an array of road parts', function() {
@@ -31,7 +37,10 @@ describe('Road parts', function() {
     })
     describe('rotate part', () => {
         const partName = 'road_crossing'
-        const roadPart = road.getRoadPartByName(partName)
+        let roadPart
+        before(() => {
+            roadPart = road.getRoadPartByName(partName)
+        })
         it('should return the same part', () => {
             assert.strictEqual(road.rotateRoadPart(roadPart).name,partName)
         })

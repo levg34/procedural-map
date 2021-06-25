@@ -14,7 +14,9 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname,'index.html'))
 })
 
-const road = new Road(5)
+let road = null
+
+Road.build(5).then(res => road = res).catch(err => console.log(err))
 
 app.get('/road', (req, res) => {
     res.json(road.getPath())
