@@ -117,7 +117,7 @@ getRoadParts().then(res => {
             models.road[index].model = gltf
             delete models.road[index].modelPromise
         })
-        getRoad().then(res => {
+        getRoad(10).then(res => {
             res.forEach(e => {
                 const reToAdd = models.road.find(re => e.roadPart.name === re.name)
                 const roadPart = reToAdd.model.scene.clone()
@@ -132,10 +132,10 @@ let iter = 0
 const animate = function () {
 	requestAnimationFrame(animate)
     if (ambulance !== undefined) {
-        if (ambulance.position.x < 5) {
+        if (ambulance.position.x < 9) {
             ambulance.position.x += 0.01
         } else {
-            ambulance.position.x = -5
+            ambulance.position.x = 0
         }
         if (iter == 30) {
             headLight.visible = !headLight.visible
