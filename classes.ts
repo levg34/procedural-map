@@ -46,12 +46,18 @@ class Road {
         path[Math.floor(length/2)] = this.createLinkedRoadPart('road_crossing','-x','+x')
         return path
     }
+    getRoadPartByName(name: string): RoadPart {
+        return this.parts.find(part => part.name === name)
+    }
     createLinkedRoadPart(name: string, previous?: Direction, next?: Direction): LinkedRoadPart {
         return {
-            roadPart: this.parts.find(part => part.name === name),
+            roadPart: this.getRoadPartByName(name),
             linkNext: next,
             linkPrevious: previous
         }
+    }
+    rotateRoadPart(part: RoadPart): RoadPart {
+        return part
     }
     getPath() {
         return this.path
