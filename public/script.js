@@ -118,10 +118,10 @@ getRoadParts().then(res => {
             delete models.road[index].modelPromise
         })
         getRoad().then(res => {
-            res.forEach((e,i) => {
+            res.forEach(e => {
                 const reToAdd = models.road.find(re => e.roadPart.name === re.name)
                 const roadPart = reToAdd.model.scene.clone()
-                roadPart.position.x += i
+                roadPart.position.set(e.position.x,e.position.y,e.position.z)
                 scene.add(roadPart)
             })
         })

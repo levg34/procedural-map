@@ -1,3 +1,5 @@
+import { Vector3 } from "three"
+
 const { getRoadParts } = require('./utils')
 
 type Direction = '+x' | '-x' | '+y' | '-y' 
@@ -17,8 +19,7 @@ class RoadPart {
 
 interface LinkedRoadPart {
     roadPart: RoadPart,
-    linkNext?: Direction
-    linkPrevious?: Direction
+    position: Vector3
 }
 
 class Road {
@@ -42,22 +43,21 @@ class Road {
     createStraightLine(length: number) {
         const path = []
         if (length < 2) return path
-        path.push(this.createLinkedRoadPart('road_straight',null,'+x'))
+        path.push(this.createLinkedRoadPart('road_straight',new Vector3(0,0,0)))
         for (let i=1;i<length;++i) {
-            path.push(this.createLinkedRoadPart('road_straight','-x','+x'))
+            path.push(this.createLinkedRoadPart('road_straight',new Vector3(i,0,0)))
         }
-        delete path[length-1].linkNext
-        path[Math.floor(length/2)] = this.createLinkedRoadPart('road_crossing','-x','+x')
+        const crossingPosition = Math.floor(length / 2)
+        path[crossingPosition] = this.createLinkedRoadPart('road_crossing',new Vector3(crossingPosition,0,0))
         return path
     }
     getRoadPartByName(name: string): RoadPart {
         return this.parts.find(part => part.name === name)
     }
-    createLinkedRoadPart(name: string, previous?: Direction, next?: Direction): LinkedRoadPart {
+    createLinkedRoadPart(name: string, position: Vector3): LinkedRoadPart {
         return {
             roadPart: this.getRoadPartByName(name),
-            linkNext: next,
-            linkPrevious: previous
+            position
         }
     }
     rotateRoadPart(part: RoadPart): RoadPart {
