@@ -14,16 +14,15 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname,'index.html'))
 })
 
-let road = null
-
-Road.build(5).then(res => road = res).catch(err => console.log(err))
-
-app.get('/road', (req, res) => {
-    res.json(road.getPath())
+app.get('/road/:length', (req, res) => {
+    const length = req.params.length ? req.params.length : 5
+    Road.build(length).then(road => {
+        res.json(road.getPath())
+    }).catch(err => res.status(500).json({error: err}))
 })
 
 app.get('/road_parts', (req, res) => {
-    getRoadParts().then(parts => res.json(parts)).catch(err => res.status(500).json({err}))
+    getRoadParts().then(parts => res.json(parts)).catch(err => res.status(500).json({error: err}))
 })
 
 app.get('/model/:type/:model', (req, res, next) => {

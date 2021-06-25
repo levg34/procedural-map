@@ -1,5 +1,4 @@
 const fs = require('fs')
-// type Direction = '+x' | '-x' | '+y' | '-y' 
 
 const confs = Object.values(require('./roadData').roadTypes)
 
