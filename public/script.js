@@ -26,11 +26,11 @@ scene.add(directionalLight)
 const size = 10
 const divisions = 10
 
-const gridHelper = new THREE.GridHelper(size, divisions)
-scene.add(gridHelper)
+// const gridHelper = new THREE.GridHelper(size, divisions)
+// scene.add(gridHelper)
 
-const axesHelper = new THREE.AxesHelper(5)
-scene.add(axesHelper)
+// const axesHelper = new THREE.AxesHelper(5)
+// scene.add(axesHelper)
 
 const loadModel = url => {
     const loader = new GLTFLoader()
@@ -62,7 +62,7 @@ loadModel('/model/cars/ambulance.glb').then(gltf => {
     ambulance.position.set(0,0,0.9)
     ambulance.rotation.y = -Math.PI/2
 
-    const frontLight = new THREE.PointLight(0xffffff, 2, 5)
+    const frontLight = new THREE.PointLight(0xffffff, 2, 15)
     frontLight.position.set(0,0.6,-1.6)
     ambulance.add(frontLight)
 

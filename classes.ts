@@ -50,7 +50,7 @@ class Road {
         })
     }
     constructor(parts: RoadPart[], length: number) {
-        this.parts = parts
+        this.parts = parts.map((part: RoadPart) => new RoadPart(part))
         this.path = []
         this.createPath(length)
     }
@@ -65,8 +65,7 @@ class Road {
         const end = this.getRoadPartByName('road_end')
         const crossing = this.getRoadPartByName('road_crossing')
 
-        path.push(new LinkedRoadPart(straight,new Vector3(0,0,0)))
-        for (let i=1;i<length;++i) {
+        for (let i=0;i<length;++i) {
             path.push(new LinkedRoadPart(straight,new Vector3(i,0,0)))
         }
         const crossingPosition = Math.floor(length / 2)
