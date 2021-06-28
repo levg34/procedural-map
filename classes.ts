@@ -55,7 +55,12 @@ class Road {
         this.createPath(length)
     }
     createPath(length: number) {
-        this.connectAll(this.createStraightLine(length))
+        const end = this.getRoadPartByName('road_end')
+        const turn = this.getRoadPartByName('road_bend')
+        this.connect(end)
+        this.connectAll(this.createStraightLine(length-3))
+        this.connect(turn)
+        this.connect(end)
     }
     connectAll(parts: RoadPart[]) {
         parts.forEach(part => this.connect(part))
@@ -82,7 +87,6 @@ class Road {
         if (length < 2) return path
 
         const straight = this.getRoadPartByName('road_straight')
-        const end = this.getRoadPartByName('road_end')
         const crossing = this.getRoadPartByName('road_crossing')
         const crossingPosition = Math.floor(length / 2)
 

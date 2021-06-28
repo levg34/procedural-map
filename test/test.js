@@ -27,7 +27,7 @@ describe('RoadPart', function() {
 })
 
 describe('Road', () => {
-    const roadLength = 5
+    const roadLength = 10
     let road = null
     before(done => {
         Road.build(roadLength).then(res => {
@@ -77,7 +77,7 @@ describe('Road', () => {
             assert.strictEqual(road.path.filter(e => e.roadPart.name === 'road_end').length,2)
         })
         it('should contain turns', () => {
-            assert.ok(road.path.map(e => e.roadPart.name).filter(e => roadTypes.turn.for.includes(e)) > 0)
+            assert.ok(road.path.map(e => e.roadPart.name).filter(e => roadTypes.turn.for.includes(e)).length > 0)
         })
     })
 })
