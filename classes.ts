@@ -99,9 +99,6 @@ class Road {
     getRoadPartByName(name: string): RoadPart {
         return this.parts.find(part => part.name === name)
     }
-    rotateRoadPart(part: RoadPart): RoadPart {
-        return part
-    }
     getPath() {
         return this.path
     }

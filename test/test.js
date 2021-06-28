@@ -2,6 +2,8 @@ const { RoadPart, Road } = require('../classes.js')
 const assert = require('assert')
 const { getRoadParts } = require('../utils.js')
 const { Vector3 } = require('three')
+const { roadTypes } = require('../roadData')
+const { vectors3Equals } = require('./testUtils.js')
 
 describe('RoadPart', function() {
     let part
@@ -18,6 +20,9 @@ describe('RoadPart', function() {
         ]
         part.rotate(Math.PI/2)
         // assert.deepStrictEqual(part.directions,expected)
+        part.directions.forEach((dir, index) => {
+            assert.ok(vectors3Equals(dir, expected[index]))
+        })
     })
 })
 
@@ -55,17 +60,6 @@ describe('Road', () => {
             assert.strictEqual(road.getRoadPartByName(partName).name, partName)
         })
     })
-    describe('rotate part', () => {
-        const partName = 'road_crossing'
-        let roadPart
-        before(() => {
-            roadPart = road.getRoadPartByName(partName)
-        })
-        it('should return the same part', () => {
-            assert.strictEqual(road.rotateRoadPart(roadPart).name,partName)
-        })
-        it('should rotate the connectors')
-    })
     describe('create road', function() {
         it('should return an array of road parts', function() {
             assert.ok(road.path instanceof Array)
@@ -79,7 +73,11 @@ describe('Road', () => {
         it('should be continuous', () => {
             assert.strictEqual(road.path[roadLength-1].position.x - road.path[0].position.x, roadLength-1)
         })
-        it('should have a start and an end')
-        it('should contain turns')
+        it('should have a start and an end', () => {
+            assert.strictEqual(road.path.filter(e => e.roadPart.name === 'road_end').length,2)
+        })
+        it('should contain turns', () => {
+            assert.ok(road.path.map(e => e.roadPart.name).filter(e => roadTypes.turn.for.includes(e)) > 0)
+        })
     })
 })
