@@ -72,7 +72,8 @@ class Road {
         const next = new Vector3()
         if (this.path.length > 0) {
             const previous = [...this.path].pop()
-            next.x = previous.position.x + 1
+            next.add(previous.position)
+            next.add(part.directions[0])
         }
         return next
     }
