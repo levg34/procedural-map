@@ -76,7 +76,9 @@ describe('Road', () => {
         it('should contain road crossings', () => {
             assert.ok(road.path.map(e => e.roadPart.name).includes('road_crossing'))
         })
-        it('should be continuous')
+        it('should be continuous', () => {
+            assert.strictEqual(road.path[roadLength-1].position.x - road.path[0].position.x, roadLength-1)
+        })
         it('should have a start and an end')
         it('should contain turns')
     })
