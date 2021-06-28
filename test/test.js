@@ -42,7 +42,7 @@ describe('Road', () => {
             assert.strictEqual(road.createStraightLine(straightLength).length,straightLength)
         })
         it('should contain exactly ONE road crossing', () => {
-            assert.strictEqual(road.createStraightLine(straightLength).filter(e => e.roadPart.name === 'road_crossing').length, 1)
+            assert.strictEqual(road.createStraightLine(straightLength).filter(e => e.name === 'road_crossing').length, 1)
         })
     })
     describe('get part by name', () => {

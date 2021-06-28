@@ -55,21 +55,43 @@ class Road {
         this.createPath(length)
     }
     createPath(length: number) {
-        this.path = this.createStraightLine(length)
+        this.connectAll(this.createStraightLine(length))
     }
-    createStraightLine(length: number) {
+    connectAll(parts: RoadPart[]) {
+        parts.forEach(part => this.connect(part))
+    }
+    connect(part: RoadPart) {
+        const position = new Vector3()
+        if (this.path.length > 0) {
+            const {x,y,z} = this.calculateNext(part)
+            position.set(x,y,z)
+        }
+        this.path.push(new LinkedRoadPart(part, position))
+    }
+    calculateNext(part: RoadPart): Vector3 {
+        const next = new Vector3()
+        if (this.path.length > 0) {
+            const previous = [...this.path].pop()
+            next.x = previous.position.x + 1
+        }
+        return next
+    }
+    createStraightLine(length: number): RoadPart[] {
         const path = []
         if (length < 2) return path
 
         const straight = this.getRoadPartByName('road_straight')
         const end = this.getRoadPartByName('road_end')
         const crossing = this.getRoadPartByName('road_crossing')
+        const crossingPosition = Math.floor(length / 2)
 
         for (let i=0;i<length;++i) {
-            path.push(new LinkedRoadPart(straight,new Vector3(i,0,0)))
+            if (i === crossingPosition) {
+                path.push(crossing)
+            } else {
+                path.push(straight)
+            }
         }
-        const crossingPosition = Math.floor(length / 2)
-        path[crossingPosition] = new LinkedRoadPart(crossing,new Vector3(crossingPosition,0,0))
 
         return path
     }
