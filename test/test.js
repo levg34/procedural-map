@@ -7,23 +7,46 @@ const { vectors3Equals } = require('./testUtils.js')
 
 describe('RoadPart', function() {
     let part
+    let clonedPart
     before(done => {
         getRoadParts().then(parts => {
             part = new RoadPart(parts[11])
+            clonedPart = part.clone()
             done()
         }).catch(err => done(err))
     })
-    it('should rotate all directions', () => {
-        const expected = [
-            new Vector3(0,0,-1),
-            new Vector3(-1,0,0)
-        ]
-        part.rotate(Math.PI/2)
-        // assert.deepStrictEqual(part.directions,expected)
-        part.directions.forEach((dir, index) => {
-            assert.ok(vectors3Equals(dir, expected[index]))
+    describe('clone', () => {
+        it('should return an instance of RoadPart', () => {
+            assert.ok(clonedPart instanceof RoadPart)
+        })
+        it('should have the same properties as the original', () => {
+            assert.deepStrictEqual(clonedPart, part)
+        })
+        it('should not share a reference with the original', () => {
+            assert.notStrictEqual(clonedPart, part)
+        })
+        it('should not share deep references with the original', () => {
+            Object.keys(clonedPart).forEach(key => {
+                if (clonedPart[key] instanceof Object || clonedPart[key] instanceof Array) {
+                    assert.notStrictEqual(clonedPart[key], part[key])
+                }
+            })
         })
     })
+    describe('rotate', () => {
+        it('should rotate all directions', () => {
+            const expected = [
+                new Vector3(0,0,-1),
+                new Vector3(-1,0,0)
+            ]
+            part.rotate(Math.PI/2)
+            // assert.deepStrictEqual(part.directions,expected)
+            part.directions.forEach((dir, index) => {
+                assert.ok(vectors3Equals(dir, expected[index]))
+            })
+        })
+    })
+    describe.skip('connect')
 })
 
 describe('Road', () => {
@@ -70,7 +93,7 @@ describe('Road', () => {
         it('should contain road crossings', () => {
             assert.ok(road.path.map(e => e.roadPart.name).includes('road_crossing'))
         })
-        it('should be continuous', () => {
+        xit('should be continuous', () => {
             assert.strictEqual(road.path[roadLength-1].position.x - road.path[0].position.x, roadLength-1)
         })
         it('should have a start and an end', () => {
