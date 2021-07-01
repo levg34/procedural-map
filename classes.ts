@@ -99,6 +99,7 @@ class Road {
             const previous = [...this.path].pop()
             next.add(previous.position)
             next.add(part.directions[0])
+            part.connect(previous.roadPart.directions[0])
         }
         return next
     }
