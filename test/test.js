@@ -46,7 +46,9 @@ describe('RoadPart', function() {
             })
         })
     })
-    describe.skip('connect')
+    describe('connect', () => {
+        it('should be connected...')
+    })
 })
 
 describe('Road', () => {
