@@ -121,7 +121,12 @@ class Road {
         return path
     }
     getRoadPartByName(name: string): RoadPart {
-        return this.parts.find(part => part.name === name)
+        const part = this.parts.find(part => part.name === name)
+        if (part instanceof RoadPart) {
+            return part.clone()
+        } else {
+            return null
+        }
     }
     getPath() {
         return this.path
