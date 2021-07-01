@@ -2,12 +2,18 @@ import { Vector3 } from "three"
 
 const { getRoadParts } = require('./utils')
 
+type RoadPartType = {
+    url: string
+    name: string
+    directions?: Vector3[]
+}
+
 class RoadPart {
     url: string
     name: string
     directions: Vector3[]
 
-    constructor(parameters: RoadPart) {
+    constructor(parameters: RoadPartType) {
         if (!parameters) return
         this.directions = parameters.directions instanceof Array ? parameters.directions : []
         this.url = parameters.url
@@ -16,6 +22,20 @@ class RoadPart {
 
     rotate(angle: number) {
         this.directions = this.directions.map((direction: Vector3) => direction.applyAxisAngle(new Vector3(0,1,0),angle))
+    }
+
+    connect(direction: Vector3) {
+        // TODO
+    }
+
+    clone() {
+        const {url, name, directions} = this
+
+        return new RoadPart({
+            url,
+            name,
+            directions: [...directions]
+        })
     }
 }
 
