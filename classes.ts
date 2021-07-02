@@ -57,8 +57,10 @@ class LinkedRoadPart extends RoadPart {
     }
 
     connect(next: RoadPart): LinkedRoadPart {
-        // TODO
-        return null
+        const nextRoadPart = new LinkedRoadPart(next)
+        nextRoadPart.translate(this.position)
+        nextRoadPart.translate(next.directions[0])
+        return nextRoadPart
     }
 }
 
@@ -91,18 +93,10 @@ class Road {
     connect(part: RoadPart) {
         let linkedRoadPart = new LinkedRoadPart(part)
         if (this.path.length > 0) {
-            linkedRoadPart.translate(this.calculateNext(part))
+            const previous = [...this.path].pop()
+            linkedRoadPart = previous.connect(part)
         }
         this.path.push(linkedRoadPart)
-    }
-    calculateNext(part: RoadPart): Vector3 {
-        const next = new Vector3()
-        if (this.path.length > 0) {
-            const previous = [...this.path].pop()
-            next.add(previous.position)
-            next.add(part.directions[0])
-        }
-        return next
     }
     createStraightLine(length: number): RoadPart[] {
         const path = []
