@@ -34,13 +34,15 @@ class RoadPart {
 class LinkedRoadPart extends RoadPart {
     position: Vector3
     rotation?: number
+    usedDirections: number[]
 
-    constructor(roadPart: RoadPart, position?: Vector3, rotation?: number) {
+    constructor(roadPart: RoadPart, position?: Vector3, rotation?: number, usedDirections?: number[])  {
         super(roadPart)
         this.position = position instanceof Vector3 ? position : new Vector3()
         if (rotation || rotation === 0) {
             this.rotation = this.rotation
         }
+        this.usedDirections = usedDirections instanceof Array ? usedDirections : []
     }
 
     rotate(angle: number) {
@@ -56,17 +58,27 @@ class LinkedRoadPart extends RoadPart {
         this.position.add(newPosition)
     }
 
+    private selectDirection(index: number): Vector3 {
+        this.usedDirections.push(index)
+        return this.directions[index]
+    }
+
     connect(next: RoadPart): LinkedRoadPart {
         const nextRoadPart = new LinkedRoadPart(next)
         nextRoadPart.translate(this.position)
-        nextRoadPart.translate(next.directions[0])
+        nextRoadPart.translate(nextRoadPart.selectDirection(0))
         return nextRoadPart
+    }
+
+    getAvailableDirections(): Vector3[] {
+        return this.directions.filter((direction,index) => !this.usedDirections.includes(index))
     }
 }
 
 class Road {
     parts: RoadPart[]
     path: LinkedRoadPart[]
+
     static build(length: number): Promise<Road> {
         return new Promise((resolve,reject) => {
             getRoadParts().then((parts: RoadPart[]) => {
@@ -74,11 +86,13 @@ class Road {
             }).catch((err: string) => reject(err))
         })
     }
+
     constructor(parts: RoadPart[], length: number) {
         this.parts = parts.map((part: RoadPart) => new RoadPart(part))
         this.path = []
         this.createPath(length)
     }
+
     createPath(length: number) {
         const end = this.getRoadPartByName('road_end')
         const turn = this.getRoadPartByName('road_bend')
@@ -87,9 +101,11 @@ class Road {
         this.connect(turn)
         this.connect(end)
     }
+
     connectAll(parts: RoadPart[]) {
         parts.forEach(part => this.connect(part))
     }
+
     connect(part: RoadPart) {
         let linkedRoadPart = new LinkedRoadPart(part)
         if (this.path.length > 0) {
@@ -98,6 +114,7 @@ class Road {
         }
         this.path.push(linkedRoadPart)
     }
+
     createStraightLine(length: number): RoadPart[] {
         const path = []
         if (length < 2) return path
@@ -116,6 +133,7 @@ class Road {
 
         return path
     }
+
     getRoadPartByName(name: string): RoadPart {
         const part = this.parts.find(part => part.name === name)
         if (part instanceof RoadPart) {
@@ -124,6 +142,7 @@ class Road {
             return null
         }
     }
+
     getPath() {
         return this.path
     }
