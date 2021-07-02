@@ -89,12 +89,11 @@ class Road {
         parts.forEach(part => this.connect(part))
     }
     connect(part: RoadPart) {
-        const position = new Vector3()
+        let linkedRoadPart = new LinkedRoadPart(part)
         if (this.path.length > 0) {
-            const {x,y,z} = this.calculateNext(part)
-            position.set(x,y,z)
+            linkedRoadPart.translate(this.calculateNext(part))
         }
-        this.path.push(new LinkedRoadPart(part, position))
+        this.path.push(linkedRoadPart)
     }
     calculateNext(part: RoadPart): Vector3 {
         const next = new Vector3()
