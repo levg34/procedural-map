@@ -119,7 +119,7 @@ getRoadParts().then(res => {
         })
         getRoad(10).then(res => {
             res.forEach(e => {
-                const reToAdd = models.road.find(re => e.roadPart.name === re.name)
+                const reToAdd = models.road.find(re => e.name === re.name)
                 const roadPart = reToAdd.model.scene.clone()
                 roadPart.position.set(e.position.x,e.position.y,e.position.z)
                 scene.add(roadPart)

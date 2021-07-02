@@ -20,14 +20,6 @@ class RoadPart {
         this.name = parameters.name
     }
 
-    rotate(angle: number) {
-        this.directions = this.directions.map((direction: Vector3) => direction.applyAxisAngle(new Vector3(0,1,0),angle))
-    }
-
-    connect(direction: Vector3) {
-        // TODO
-    }
-
     clone() {
         const {url, name, directions} = this
 
@@ -39,23 +31,34 @@ class RoadPart {
     }
 }
 
-class LinkedRoadPart {
-    roadPart: RoadPart
+class LinkedRoadPart extends RoadPart {
     position: Vector3
     rotation?: number
 
-    constructor(roadPart: RoadPart, position: Vector3, rotation?: number) {
-        this.roadPart = roadPart
-        this.position = position
+    constructor(roadPart: RoadPart, position?: Vector3, rotation?: number) {
+        super(roadPart)
+        this.position = position instanceof Vector3 ? position : new Vector3()
         if (rotation || rotation === 0) {
             this.rotation = this.rotation
         }
     }
 
-    static fromObject(object: LinkedRoadPart): LinkedRoadPart {
-        if (!object) return null
-        const {roadPart, position, rotation} = object
-        return new LinkedRoadPart(roadPart, position, rotation)
+    rotate(angle: number) {
+        this.directions = this.directions.map((direction: Vector3) => direction.applyAxisAngle(new Vector3(0,1,0),angle))
+        if (this.rotation) {
+            this.rotation += angle
+        } else {
+            this.rotation = angle
+        }
+    }
+
+    translate(newPosition: Vector3) {
+        this.position.add(newPosition)
+    }
+
+    connect(next: RoadPart): LinkedRoadPart {
+        // TODO
+        return null
     }
 }
 
@@ -99,7 +102,6 @@ class Road {
             const previous = [...this.path].pop()
             next.add(previous.position)
             next.add(part.directions[0])
-            part.connect(previous.roadPart.directions[0])
         }
         return next
     }
@@ -136,5 +138,6 @@ class Road {
 
 module.exports = {
     RoadPart,
-    Road
+    Road,
+    LinkedRoadPart
 }
