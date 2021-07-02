@@ -1,9 +1,9 @@
-const { RoadPart, Road } = require('../classes.js')
+const { RoadPart, Road, LinkedRoadPart } = require('../classes.js')
 const assert = require('assert')
 const { getRoadParts } = require('../utils.js')
 const { Vector3 } = require('three')
 const { roadTypes } = require('../roadData')
-const { vectors3Equals } = require('./testUtils.js')
+const { vectors3Equals, doubleEquals } = require('./testUtils.js')
 
 describe('RoadPart', function() {
     let part
@@ -33,21 +33,47 @@ describe('RoadPart', function() {
             })
         })
     })
+})
+
+describe('LinkedRoadPart', () => {
+    let linkedPart
+    before(done => {
+        getRoadParts().then(parts => {
+            const part = new RoadPart(parts[11])
+            linkedPart = new LinkedRoadPart(part)
+            done()
+        }).catch(err => done(err))
+    })
     describe('rotate', () => {
         it('should rotate all directions', () => {
             const expected = [
                 new Vector3(0,0,-1),
                 new Vector3(-1,0,0)
             ]
-            part.rotate(Math.PI/2)
+            linkedPart.rotate(Math.PI/2)
             // assert.deepStrictEqual(part.directions,expected)
-            part.directions.forEach((dir, index) => {
+            linkedPart.directions.forEach((dir, index) => {
                 assert.ok(vectors3Equals(dir, expected[index]))
             })
         })
+        it('should add to rotation', () => {
+            assert.ok(doubleEquals(linkedPart.rotation, Math.PI/2))
+        })
+    })
+    describe('translate', () => {
+        it('should translate the position', () => {
+            const expected = new Vector3(1,-2,3)
+            linkedPart.translate(expected)
+            assert.deepStrictEqual(linkedPart.position,expected)
+        })
+        it('should translate the position multiple times', () => {
+            const expected = new Vector3(3,0,5)
+            linkedPart.translate(new Vector3(2,2,2))
+            assert.deepStrictEqual(linkedPart.position,expected)
+        })
     })
     describe('connect', () => {
-        it('should be connected...')
+        it ('should connect...')
     })
 })
 
@@ -93,16 +119,16 @@ describe('Road', () => {
             assert.strictEqual(road.path.length,roadLength)
         })
         it('should contain road crossings', () => {
-            assert.ok(road.path.map(e => e.roadPart.name).includes('road_crossing'))
+            assert.ok(road.path.map(e => e.name).includes('road_crossing'))
         })
         xit('should be continuous', () => {
             assert.strictEqual(road.path[roadLength-1].position.x - road.path[0].position.x, roadLength-1)
         })
         it('should have a start and an end', () => {
-            assert.strictEqual(road.path.filter(e => e.roadPart.name === 'road_end').length,2)
+            assert.strictEqual(road.path.filter(e => e.name === 'road_end').length,2)
         })
         it('should contain turns', () => {
-            assert.ok(road.path.map(e => e.roadPart.name).filter(e => roadTypes.turn.for.includes(e)).length > 0)
+            assert.ok(road.path.map(e => e.name).filter(e => roadTypes.turn.for.includes(e)).length > 0)
         })
     })
 })
