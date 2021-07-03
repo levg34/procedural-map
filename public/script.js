@@ -26,11 +26,11 @@ scene.add(directionalLight)
 const size = 10
 const divisions = 10
 
-// const gridHelper = new THREE.GridHelper(size, divisions)
-// scene.add(gridHelper)
+const gridHelper = new THREE.GridHelper(size, divisions)
+scene.add(gridHelper)
 
-// const axesHelper = new THREE.AxesHelper(5)
-// scene.add(axesHelper)
+const axesHelper = new THREE.AxesHelper(5)
+scene.add(axesHelper)
 
 const loadModel = url => {
     const loader = new GLTFLoader()
@@ -59,7 +59,7 @@ loadModel('/model/cars/ambulance.glb').then(gltf => {
     ambulance = gltf.scene
 
     ambulance.scale.set(0.2,0.2,0.2)
-    ambulance.position.set(0,0,0.9)
+    ambulance.position.set(0,0,0.15)
     ambulance.rotation.y = -Math.PI/2
 
     const frontLight = new THREE.PointLight(0xffffff, 2, 15)
@@ -120,7 +120,11 @@ getRoadParts().then(res => {
         getRoad(10).then(res => {
             res.forEach(e => {
                 const reToAdd = models.road.find(re => e.name === re.name)
-                const roadPart = reToAdd.model.scene.clone()
+                const roadPart = new THREE.Object3D()
+                const roadPartInitial = reToAdd.model.scene.clone()
+                roadPartInitial.position.z = -0.75
+                roadPart.add(roadPartInitial)
+                roadPart.rotation.y = e.rotation ? e.rotation : 0
                 roadPart.position.set(e.position.x,e.position.y,e.position.z)
                 scene.add(roadPart)
             })
