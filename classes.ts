@@ -67,6 +67,7 @@ class LinkedRoadPart extends RoadPart {
         const nextRoadPart = new LinkedRoadPart(next)
         nextRoadPart.translate(this.position)
         nextRoadPart.translate(nextRoadPart.selectDirection(0))
+        this.selectDirection(0)
         return nextRoadPart
     }
 

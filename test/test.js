@@ -37,10 +37,13 @@ describe('RoadPart', function() {
 
 describe('LinkedRoadPart', () => {
     let linkedPart
+    let straight
     before(done => {
         getRoadParts().then(parts => {
-            const part = new RoadPart(parts[11])
-            linkedPart = new LinkedRoadPart(part)
+            const bend = new RoadPart(parts[11])
+            linkedPart = new LinkedRoadPart(bend)
+            const straightPart = parts.find(part => part.name === 'road_straight')
+            straight = new RoadPart(straightPart)
             done()
         }).catch(err => done(err))
     })
@@ -82,7 +85,13 @@ describe('LinkedRoadPart', () => {
         })
     })
     describe('connect', () => {
-        it ('should connect...')
+        xit ('should connect parts by their available directions', () => {
+            const connected = linkedPart.connect(straight)
+            linkedPart
+        })
+        xit ('should not use a direction that is already being used', () => {
+            //
+        })
     })
 })
 
