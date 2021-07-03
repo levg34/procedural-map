@@ -37,7 +37,7 @@ class LinkedRoadPart extends RoadPart {
     usedDirections: number[]
 
     constructor(roadPart: RoadPart, position?: Vector3, rotation?: number, usedDirections?: number[])  {
-        super(roadPart)
+        super(roadPart instanceof RoadPart ? roadPart.clone() : roadPart)
         this.position = position instanceof Vector3 ? position : new Vector3()
         if (rotation || rotation === 0) {
             this.rotation = this.rotation
@@ -64,8 +64,12 @@ class LinkedRoadPart extends RoadPart {
         }
         let index = 0
         if (direction instanceof Vector3) {
-            // calculate index...
-            // index = ...
+            this.directions.forEach((myDirection, myIndex) => {
+                if (this.usedDirections.includes(index)) return
+                if (myDirection.add(direction).length() < 0.0000001) {
+                    index = myIndex
+                }
+            })
         }
         this.usedDirections.push(index)
         return this.directions[index]
@@ -78,7 +82,8 @@ class LinkedRoadPart extends RoadPart {
         const nextRoadPart = new LinkedRoadPart(next)
         nextRoadPart.translate(this.position)
         const direction = this.selectDirection()
-        nextRoadPart.translate(nextRoadPart.selectDirection(direction))
+        nextRoadPart.translate(direction)
+        nextRoadPart.selectDirection(direction)
         return nextRoadPart
     }
 
