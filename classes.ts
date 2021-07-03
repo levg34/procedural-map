@@ -34,9 +34,9 @@ class RoadPart {
 class LinkedRoadPart extends RoadPart {
     position: Vector3
     rotation?: number
-    usedDirections: number[]
+    usedDirections: Vector3[]
 
-    constructor(roadPart: RoadPart, position?: Vector3, rotation?: number, usedDirections?: number[])  {
+    constructor(roadPart: RoadPart, position?: Vector3, rotation?: number, usedDirections?: Vector3[])  {
         super(roadPart instanceof RoadPart ? roadPart.clone() : roadPart)
         this.position = position instanceof Vector3 ? position : new Vector3()
         if (rotation || rotation === 0) {
@@ -62,17 +62,21 @@ class LinkedRoadPart extends RoadPart {
         if (this.getAvailableDirections().length < 1) {
             throw new Error('No direction available')
         }
-        let index = 0
+
+        let nextDirection: Vector3 = this.getAvailableDirections()[0]
+
         if (direction instanceof Vector3) {
-            this.directions.forEach((myDirection, myIndex) => {
-                if (this.usedDirections.includes(index)) return
-                if (myDirection.add(direction).length() < 0.0000001) {
-                    index = myIndex
-                }
-            })
+            const connectDirection = this.getAvailableDirections().find(dir => dir.clone().add(direction).length() < 0.0000001)
+            if (connectDirection instanceof Vector3) {
+                nextDirection = connectDirection.clone()
+            } else {
+                console.info('Not found !', direction)
+                console.info(this)
+            }
         }
-        this.usedDirections.push(index)
-        return this.directions[index]
+
+        this.usedDirections.push(nextDirection)
+        return nextDirection
     }
 
     connect(next: RoadPart): LinkedRoadPart {
@@ -88,7 +92,7 @@ class LinkedRoadPart extends RoadPart {
     }
 
     getAvailableDirections(): Vector3[] {
-        return this.directions.filter((direction,index) => !this.usedDirections.includes(index))
+        return this.directions.filter(direction => !this.usedDirections.includes(direction))
     }
 }
 
