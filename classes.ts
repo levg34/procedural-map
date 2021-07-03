@@ -58,16 +58,27 @@ class LinkedRoadPart extends RoadPart {
         this.position.add(newPosition)
     }
 
-    private selectDirection(index: number): Vector3 {
+    private selectDirection(direction?: Vector3): Vector3 {
+        if (this.getAvailableDirections().length < 1) {
+            throw new Error('No direction available')
+        }
+        let index = 0
+        if (direction instanceof Vector3) {
+            // calculate index...
+            // index = ...
+        }
         this.usedDirections.push(index)
         return this.directions[index]
     }
 
     connect(next: RoadPart): LinkedRoadPart {
+        if (this.getAvailableDirections().length < 1) {
+            throw new Error('No direction available')
+        }
         const nextRoadPart = new LinkedRoadPart(next)
         nextRoadPart.translate(this.position)
-        nextRoadPart.translate(nextRoadPart.selectDirection(0))
-        this.selectDirection(0)
+        const direction = this.selectDirection()
+        nextRoadPart.translate(nextRoadPart.selectDirection(direction))
         return nextRoadPart
     }
 
