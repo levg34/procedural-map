@@ -80,8 +80,8 @@ describe('LinkedRoadPart', () => {
             assert.deepStrictEqual(linkedPart.getAvailableDirections(), linkedPart.directions)
         })
         it('should not return a direction which is being used', () => {
-            linkedPart.selectDirection(0)
-            assert.ok(!linkedPart.getAvailableDirections().includes(linkedPart.directions[0]))
+            const selected = linkedPart.selectDirection()
+            assert.ok(!linkedPart.getAvailableDirections().includes(selected))
         })
     })
     describe('connect', () => {
