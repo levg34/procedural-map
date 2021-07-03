@@ -130,12 +130,12 @@ class Road {
 
     connect(part: RoadPart) {
         let linkedRoadPart = new LinkedRoadPart(part)
-        if (part.name === 'road_end' || part.name === 'road_bend') {
-            linkedRoadPart.rotate(Math.PI)
-        }
         if (this.path.length > 0) {
             const previous = [...this.path].pop()
             linkedRoadPart = previous.connect(part)
+        }
+        if (part.name === 'road_end' || part.name === 'road_bend') {
+            linkedRoadPart.rotate(Math.PI)
         }
         this.path.push(linkedRoadPart)
     }

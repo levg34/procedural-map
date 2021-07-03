@@ -26,11 +26,11 @@ scene.add(directionalLight)
 const size = 10
 const divisions = 10
 
-const gridHelper = new THREE.GridHelper(size, divisions)
-scene.add(gridHelper)
+// const gridHelper = new THREE.GridHelper(size, divisions)
+// scene.add(gridHelper)
 
-const axesHelper = new THREE.AxesHelper(5)
-scene.add(axesHelper)
+// const axesHelper = new THREE.AxesHelper(5)
+// scene.add(axesHelper)
 
 const loadModel = url => {
     const loader = new GLTFLoader()
@@ -138,9 +138,14 @@ const animate = function () {
     if (ambulance !== undefined) {
         if (ambulance.position.x < 9) {
             ambulance.position.x += 0.01
+            camera.position.x += 0.01
+            controls.target.x += 0.01
         } else {
             ambulance.position.x = 0
+            camera.position.x -= 9 + 0.01
+            controls.target.x -= 9 + 0.01
         }
+        controls.update()
         if (iter == 30) {
             headLight.visible = !headLight.visible
             headLight2.visible = !headLight2.visible
