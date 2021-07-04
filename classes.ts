@@ -77,8 +77,16 @@ class LinkedRoadPart extends RoadPart {
             if (connectDirection instanceof Vector3) {
                 nextDirection = connectDirection.clone()
             } else {
-                // console.info('Not found !', direction)
-                // console.info(this)
+                let connectDirectionRotated: Vector3 | null = null
+                while (!(connectDirectionRotated instanceof Vector3) || this.rotation > 3*Math.PI/2) {
+                    this.rotate(Math.PI/2)
+                    connectDirectionRotated = this.getAvailableDirections().find(dir => dir.clone().add(direction).length() < 0.0000001)
+                }
+                if (!(connectDirectionRotated instanceof Vector3)) {
+                    throw new Error('Cound not connect to direction !')
+                } else {
+                    nextDirection = connectDirectionRotated.clone()
+                }
             }
         }
 
@@ -127,7 +135,6 @@ class Road {
         const start = end.clone()
         start.rotate(Math.PI)
         const turn = this.getRoadPartByName('road_bend')
-        turn.rotate(Math.PI)
         this.connect(start)
         this.connectAll(this.createStraightLine(length-3))
         this.connect(turn)
