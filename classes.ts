@@ -6,43 +6,23 @@ type RoadPartType = {
     url: string
     name: string
     directions?: Vector3[]
+    rotation?: number
 }
 
 class RoadPart {
     url: string
     name: string
     directions: Vector3[]
+    rotation?: number
 
     constructor(parameters: RoadPartType) {
         if (!parameters) return
         this.directions = parameters.directions instanceof Array ? parameters.directions : []
         this.url = parameters.url
         this.name = parameters.name
-    }
-
-    clone() {
-        const {url, name, directions} = this
-
-        return new RoadPart({
-            url,
-            name,
-            directions: [...directions]
-        })
-    }
-}
-
-class LinkedRoadPart extends RoadPart {
-    position: Vector3
-    rotation?: number
-    usedDirections: Vector3[]
-
-    constructor(roadPart: RoadPart, position?: Vector3, rotation?: number, usedDirections?: Vector3[])  {
-        super(roadPart instanceof RoadPart ? roadPart.clone() : roadPart)
-        this.position = position instanceof Vector3 ? position : new Vector3()
-        if (rotation || rotation === 0) {
-            this.rotation = this.rotation
+        if (parameters.rotation || parameters.rotation === 0) {
+            this.rotation = parameters.rotation
         }
-        this.usedDirections = usedDirections instanceof Array ? usedDirections : []
     }
 
     rotate(angle: number) {
@@ -52,6 +32,33 @@ class LinkedRoadPart extends RoadPart {
         } else {
             this.rotation = angle
         }
+    }
+
+    clone(): RoadPart {
+        const {url, name, directions, rotation} = this
+
+        const roadClone = new RoadPart({
+            url,
+            name,
+            directions: directions.map(direction => direction.clone())
+        })
+
+        if (rotation || rotation === 0) {
+            roadClone.rotation = rotation
+        }
+
+        return roadClone
+    }
+}
+
+class LinkedRoadPart extends RoadPart {
+    position: Vector3
+    usedDirections: Vector3[]
+
+    constructor(roadPart: RoadPart, position?: Vector3, usedDirections?: Vector3[])  {
+        super(roadPart instanceof RoadPart ? roadPart.clone() : roadPart)
+        this.position = position instanceof Vector3 ? position : new Vector3()
+        this.usedDirections = usedDirections instanceof Array ? usedDirections : []
     }
 
     translate(newPosition: Vector3) {
@@ -117,8 +124,11 @@ class Road {
 
     createPath(length: number) {
         const end = this.getRoadPartByName('road_end')
+        const start = end.clone()
+        start.rotate(Math.PI)
         const turn = this.getRoadPartByName('road_bend')
-        this.connect(end)
+        turn.rotate(Math.PI)
+        this.connect(start)
         this.connectAll(this.createStraightLine(length-3))
         this.connect(turn)
         this.connect(end)
@@ -133,9 +143,6 @@ class Road {
         if (this.path.length > 0) {
             const previous = [...this.path].pop()
             linkedRoadPart = previous.connect(part)
-        }
-        if (part.name === 'road_end' || part.name === 'road_bend') {
-            linkedRoadPart.rotate(Math.PI)
         }
         this.path.push(linkedRoadPart)
     }
@@ -152,7 +159,7 @@ class Road {
             if (i === crossingPosition) {
                 path.push(crossing)
             } else {
-                path.push(straight)
+                path.push(straight.clone())
             }
         }
 

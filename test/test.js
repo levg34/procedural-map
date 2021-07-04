@@ -15,6 +15,23 @@ describe('RoadPart', function() {
             done()
         }).catch(err => done(err))
     })
+    describe('rotate', () => {
+        it('should rotate all directions', () => {
+            const expected = [
+                new Vector3(0,0,-1),
+                new Vector3(-1,0,0)
+            ]
+            part.rotate(Math.PI/2)
+            clonedPart.rotate(Math.PI/2)
+            // assert.deepStrictEqual(part.directions,expected)
+            part.directions.forEach((dir, index) => {
+                assert.ok(vectors3Equals(dir, expected[index]))
+            })
+        })
+        it('should add to rotation', () => {
+            assert.ok(doubleEquals(part.rotation, Math.PI/2))
+        })
+    })
     describe('clone', () => {
         it('should return an instance of RoadPart', () => {
             assert.ok(clonedPart instanceof RoadPart)
@@ -46,22 +63,6 @@ describe('LinkedRoadPart', () => {
             straight = new RoadPart(straightPart)
             done()
         }).catch(err => done(err))
-    })
-    describe('rotate', () => {
-        it('should rotate all directions', () => {
-            const expected = [
-                new Vector3(0,0,-1),
-                new Vector3(-1,0,0)
-            ]
-            linkedPart.rotate(Math.PI/2)
-            // assert.deepStrictEqual(part.directions,expected)
-            linkedPart.directions.forEach((dir, index) => {
-                assert.ok(vectors3Equals(dir, expected[index]))
-            })
-        })
-        it('should add to rotation', () => {
-            assert.ok(doubleEquals(linkedPart.rotation, Math.PI/2))
-        })
     })
     describe('translate', () => {
         it('should translate the position', () => {
