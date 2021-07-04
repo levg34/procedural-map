@@ -11,7 +11,8 @@
     "start": "run-s compile-ts start-server",
     "start-server": "node index.js",
     "dev-server": "nodemon",
-    "dev": "run-p ts-watch dev-server"
+    "dev": "run-p ts-watch dev-server",
+    "build-test-start": "run-s compile-ts mocha start-server"
   },
   "repository": {
     "type": "git",
