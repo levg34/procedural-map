@@ -124,7 +124,9 @@ getRoadParts().then(res => {
                 const roadPartInitial = reToAdd.model.scene.clone()
                 roadPartInitial.position.z = -0.75
                 roadPart.add(roadPartInitial)
-                roadPart.rotation.y = e.rotation ? e.rotation : 0
+                if (e.rotation) {
+                    roadPart.rotation.y = e.rotation
+                }
                 roadPart.position.set(e.position.x,e.position.y,e.position.z)
                 scene.add(roadPart)
             })
