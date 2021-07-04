@@ -127,17 +127,20 @@ class Road {
     constructor(parts: RoadPart[], length: number) {
         this.parts = parts.map((part: RoadPart) => new RoadPart(part))
         this.path = []
-        this.createPath(length)
+        this.createPath(length, 5)
     }
 
-    createPath(length: number) {
+    createPath(length: number, turns: number) {
         const end = this.getRoadPartByName('road_end')
         const start = end.clone()
         start.rotate(Math.PI)
-        const turn = this.getRoadPartByName('road_bend')
         this.connect(start)
-        this.connectAll(this.createStraightLine(length-3))
-        this.connect(turn)
+        this.connectAll(this.createStraightLine(length))
+        for (let index = 0; index < turns; index++) {
+            const turn = this.getRoadPartByName('road_bend')
+            this.connect(turn)
+            this.connectAll(this.createStraightLine(length))
+        }
         this.connect(end)
     }
 
