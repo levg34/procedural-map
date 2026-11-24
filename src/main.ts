@@ -87,6 +87,8 @@ void loadModel('/model/cars/ambulance.glb')
     })
 
 function loadRoadPreview(): void {
+    if (models.road.length === 0) return
+
     const index = models.index
     if (index === undefined) return
 
