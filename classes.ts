@@ -1,11 +1,8 @@
-import { Vector3 } from "three"
+import { Vector3 } from 'three'
+import { getRoadParts } from './utils'
+import type { RoadPartMetadata } from './utils'
 
-const { getRoadParts } = require('./utils')
-
-type RoadPartType = {
-    url: string
-    name: string
-    directions?: Vector3[]
+type RoadPartType = RoadPartMetadata & {
     rotation?: number
 }
 
@@ -16,8 +13,8 @@ class RoadPart {
     rotation?: number
 
     constructor(parameters: RoadPartType) {
-        if (!parameters) return
-        this.directions = parameters.directions instanceof Array ? parameters.directions : []
+        this.directions =
+            parameters.directions instanceof Array ? parameters.directions.map((direction) => direction.clone()) : []
         this.url = parameters.url
         this.name = parameters.name
         if (parameters.rotation || parameters.rotation === 0) {
@@ -25,8 +22,10 @@ class RoadPart {
         }
     }
 
-    rotate(angle: number) {
-        this.directions = this.directions.map((direction: Vector3) => direction.applyAxisAngle(new Vector3(0,1,0),angle))
+    rotate(angle: number): void {
+        this.directions = this.directions.map((direction: Vector3) =>
+            direction.applyAxisAngle(new Vector3(0, 1, 0), angle)
+        )
         if (this.rotation) {
             this.rotation += angle
         } else {
@@ -35,12 +34,12 @@ class RoadPart {
     }
 
     clone(): RoadPart {
-        const {url, name, directions, rotation} = this
+        const { url, name, directions, rotation } = this
 
         const roadClone = new RoadPart({
             url,
             name,
-            directions: directions.map(direction => direction.clone())
+            directions: directions.map((direction) => direction.clone())
         })
 
         if (rotation || rotation === 0) {
@@ -55,13 +54,13 @@ class LinkedRoadPart extends RoadPart {
     position: Vector3
     usedDirections: Vector3[]
 
-    constructor(roadPart: RoadPart, position?: Vector3, usedDirections?: Vector3[])  {
+    constructor(roadPart: RoadPart, position?: Vector3, usedDirections?: Vector3[]) {
         super(roadPart instanceof RoadPart ? roadPart.clone() : roadPart)
         this.position = position instanceof Vector3 ? position : new Vector3()
         this.usedDirections = usedDirections instanceof Array ? usedDirections : []
     }
 
-    translate(newPosition: Vector3) {
+    translate(newPosition: Vector3): void {
         this.position.add(newPosition)
     }
 
@@ -73,19 +72,25 @@ class LinkedRoadPart extends RoadPart {
         let nextDirection: Vector3 = this.getAvailableDirections()[0]
 
         if (direction instanceof Vector3) {
-            const connectDirection = this.getAvailableDirections().find(dir => dir.clone().add(direction).length() < 0.0000001)
+            const connectDirection = this.getAvailableDirections().find(
+                (dir) => dir.clone().add(direction).length() < 0.0000001
+            )
             if (connectDirection instanceof Vector3) {
-                nextDirection = connectDirection.clone()
+                nextDirection = connectDirection
             } else {
-                let connectDirectionRotated: Vector3 | null = null
-                while (!(connectDirectionRotated instanceof Vector3) || this.rotation > 3*Math.PI/2) {
-                    this.rotate(Math.PI/2)
-                    connectDirectionRotated = this.getAvailableDirections().find(dir => dir.clone().add(direction).length() < 0.0000001)
+                let connectDirectionRotated: Vector3 | undefined
+                let rotations = 0
+                while (!(connectDirectionRotated instanceof Vector3) && rotations < 4) {
+                    this.rotate(Math.PI / 2)
+                    rotations++
+                    connectDirectionRotated = this.getAvailableDirections().find(
+                        (dir) => dir.clone().add(direction).length() < 0.0000001
+                    )
                 }
                 if (!(connectDirectionRotated instanceof Vector3)) {
-                    throw new Error('Cound not connect to direction !')
+                    throw new Error('Could not connect to direction')
                 } else {
-                    nextDirection = connectDirectionRotated.clone()
+                    nextDirection = connectDirectionRotated
                 }
             }
         }
@@ -102,13 +107,12 @@ class LinkedRoadPart extends RoadPart {
         nextRoadPart.translate(this.position)
         const direction = this.selectDirection()
         nextRoadPart.translate(direction)
-        const nextDir = nextRoadPart.selectDirection(direction)
-        // console.log(this.name+' -> '+next.name, nextDir)
+        nextRoadPart.selectDirection(direction)
         return nextRoadPart
     }
 
     getAvailableDirections(): Vector3[] {
-        return this.directions.filter(direction => !this.usedDirections.includes(direction))
+        return this.directions.filter((direction) => !this.usedDirections.includes(direction))
     }
 }
 
@@ -117,55 +121,61 @@ class Road {
     path: LinkedRoadPart[]
 
     static build(length: number): Promise<Road> {
-        return new Promise((resolve,reject) => {
-            getRoadParts().then((parts: RoadPart[]) => {
-                resolve(new Road(parts,length))
-            }).catch((err: string) => reject(err))
-        })
+        return getRoadParts().then((parts) => new Road(parts, length))
     }
 
-    constructor(parts: RoadPart[], length: number) {
-        this.parts = parts.map((part: RoadPart) => new RoadPart(part))
+    constructor(parts: RoadPartMetadata[], length: number) {
+        this.parts = parts.map((part) => new RoadPart(part))
         this.path = []
         this.createPath(length, 5)
     }
 
-    createPath(length: number, turns: number) {
+    createPath(length: number, turns: number): void {
         const end = this.getRoadPartByName('road_end')
+        if (!end) throw new Error('Required road part not found: road_end')
+
         const start = end.clone()
         start.rotate(Math.PI)
         this.connect(start)
         this.connectAll(this.createStraightLine(length))
         for (let index = 0; index < turns; index++) {
             const turn = this.getRoadPartByName('road_bend')
+            if (!turn) throw new Error('Required road part not found: road_bend')
+
             this.connect(turn)
             this.connectAll(this.createStraightLine(length))
         }
         this.connect(end)
     }
 
-    connectAll(parts: RoadPart[]) {
-        parts.forEach(part => this.connect(part))
+    connectAll(parts: RoadPart[]): void {
+        parts.forEach((part) => this.connect(part))
     }
 
-    connect(part: RoadPart) {
+    connect(part: RoadPart): void {
         let linkedRoadPart = new LinkedRoadPart(part)
         if (this.path.length > 0) {
-            const previous = [...this.path].pop()
+            const previous = this.path[this.path.length - 1]
+            if (!previous) throw new Error('Road path is missing its previous segment')
+
             linkedRoadPart = previous.connect(part)
         }
         this.path.push(linkedRoadPart)
     }
 
     createStraightLine(length: number): RoadPart[] {
-        const path = []
+        const path: RoadPart[] = []
         if (length < 2) return path
 
         const straight = this.getRoadPartByName('road_straight')
         const crossing = this.getRoadPartByName('road_crossing')
+        if (!straight || !crossing) {
+            throw new Error('Required road parts not found: road_straight and road_crossing')
+        }
+
         const crossingPosition = Math.floor(length / 2)
 
-        for (let i=0;i<length;++i) {
+        for (let i = 0; i < length; ++i) {
             if (i === crossingPosition) {
                 path.push(crossing)
             } else {
@@ -176,8 +186,8 @@ class Road {
         return path
     }
 
-    getRoadPartByName(name: string): RoadPart {
-        const part = this.parts.find(part => part.name === name)
+    getRoadPartByName(name: string): RoadPart | null {
+        const part = this.parts.find((part) => part.name === name)
         if (part instanceof RoadPart) {
             return part.clone()
         } else {
@@ -185,13 +195,9 @@ class Road {
         }
     }
 
-    getPath() {
+    getPath(): LinkedRoadPart[] {
         return this.path
     }
 }
 
-module.exports = {
-    RoadPart,
-    Road,
-    LinkedRoadPart
-}
+export { RoadPart, Road, LinkedRoadPart }

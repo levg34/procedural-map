@@ -1,0 +1,15 @@
+{
+    "compilerOptions": {
+        "target": "ES2022",
+        "module": "ESNext",
+        "moduleResolution": "Bundler",
+        "strict": true,
+        "noEmit": true,
+        "verbatimModuleSyntax": true,
+        "esModuleInterop": true,
+        "skipLibCheck": true,
+        "types": ["node"],
+        "forceConsistentCasingInFileNames": true
+    },
+    "include": ["classes.ts", "index.ts", "roadData.ts", "utils.ts", "src/**/*.ts", "test/**/*.ts", "vite.config.ts"]
+}
