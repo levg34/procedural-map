@@ -1,8 +1,8 @@
 import express from 'express'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { Road } from './classes.ts'
-import { getRoadParts } from './utils.ts'
+import { Road } from './classes'
+import { getRoadParts } from './utils'
 
 const app = express()
 const rootDirectory = dirname(fileURLToPath(import.meta.url))

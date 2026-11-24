@@ -2,7 +2,7 @@ import { readdir } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import type { Vector3 } from 'three'
-import { roadTypes } from './roadData.ts'
+import { roadTypes } from './roadData'
 
 export type RoadPartMetadata = {
     url: string

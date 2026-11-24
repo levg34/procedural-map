@@ -1,10 +1,10 @@
 import assert from 'node:assert/strict'
 import { Vector3 } from 'three'
 import { beforeAll, describe, it, vi } from 'vitest'
-import { LinkedRoadPart, Road, RoadPart } from '../classes.ts'
-import { roadTypes } from '../roadData.ts'
-import { getRoadParts } from '../utils.ts'
-import { doubleEquals, vectors3Equals } from './testUtils.ts'
+import { LinkedRoadPart, Road, RoadPart } from '../classes'
+import { roadTypes } from '../roadData'
+import { getRoadParts } from '../utils'
+import { doubleEquals, vectors3Equals } from './testUtils'
 
 describe('RoadPart', function () {
     let part: RoadPart

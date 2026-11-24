@@ -1,6 +1,6 @@
 import { Vector3 } from 'three'
-import { getRoadParts } from './utils.ts'
-import type { RoadPartMetadata } from './utils.ts'
+import { getRoadParts } from './utils'
+import type { RoadPartMetadata } from './utils'
 
 type RoadPartType = RoadPartMetadata & {
     rotation?: number

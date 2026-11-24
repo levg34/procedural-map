@@ -1,7 +1,7 @@
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { GLTFLoader, type GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js'
-import { getRoad, getRoadParts, type RoadModel, type RoadSegment } from './data.ts'
+import { getRoad, getRoadParts, type RoadModel, type RoadSegment } from './data'
 
 type LoadedRoadModel = RoadModel & {
     model: GLTF
