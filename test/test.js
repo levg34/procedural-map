@@ -88,11 +88,46 @@ describe('LinkedRoadPart', () => {
     })
     describe('connect', () => {
         it('should connect parts by their available directions', () => {
-            const connected = linkedPart.connect(straight)
-            linkedPart
+            const source = new LinkedRoadPart(
+                new RoadPart({
+                    url: '',
+                    name: 'bend',
+                    directions: [new Vector3(1, 0, 0), new Vector3(0, 0, -1)]
+                })
+            )
+            const nextPart = new RoadPart({
+                url: '',
+                name: 'straight',
+                directions: [new Vector3(1, 0, 0), new Vector3(-1, 0, 0)]
+            })
+
+            const connected = source.connect(nextPart)
+
+            assert.ok(vectors3Equals(connected.position, new Vector3(1, 0, 0)))
+            assert.ok(vectors3Equals(source.usedDirections[0], new Vector3(1, 0, 0)))
+            assert.ok(vectors3Equals(connected.usedDirections[0], new Vector3(-1, 0, 0)))
+            assert.deepStrictEqual(nextPart.directions, [new Vector3(1, 0, 0), new Vector3(-1, 0, 0)])
         })
+
         it('should not use a direction that is already being used', () => {
-            //
+            const source = new LinkedRoadPart(
+                new RoadPart({
+                    url: '',
+                    name: 'bend',
+                    directions: [new Vector3(1, 0, 0), new Vector3(0, 0, -1)]
+                })
+            )
+            const straightPart = new RoadPart({
+                url: '',
+                name: 'straight',
+                directions: [new Vector3(1, 0, 0), new Vector3(-1, 0, 0)]
+            })
+
+            source.connect(straightPart)
+            source.connect(straightPart)
+
+            assert.strictEqual(source.getAvailableDirections().length, 0)
+            assert.throws(() => source.connect(straightPart), /No direction available/)
         })
     })
 })
@@ -141,12 +176,26 @@ describe('Road', () => {
             assert.ok(road.path instanceof Array)
         })
         it('should be exactly as long as intended', function () {
-            assert.strictEqual(road.path.length, roadLength)
+            const straightSections = 6
+            const turns = 5
+            const endpoints = 2
+            assert.strictEqual(road.path.length, straightSections * roadLength + turns + endpoints)
         })
         it('should contain road crossings', () => {
             assert.ok(road.path.map((e) => e.name).includes('road_crossing'))
         })
-        it('should be continuous')
+        it('should be continuous', () => {
+            for (let index = 1; index < road.path.length; index++) {
+                const previous = road.path[index - 1]
+                const current = road.path[index]
+                const direction = current.position.clone().sub(previous.position)
+
+                assert.ok(
+                    previous.usedDirections.some((usedDirection) => vectors3Equals(usedDirection, direction)),
+                    `${previous.name} at ${previous.position.toArray()} is not connected to ${current.name} at ${current.position.toArray()}`
+                )
+            }
+        })
         it('should have a start and an end', () => {
             assert.strictEqual(road.path.filter((e) => e.name === 'road_end').length, 2)
         })
