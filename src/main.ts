@@ -1,6 +1,16 @@
-import * as THREE from 'three'
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
-import { GLTFLoader, type GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js'
+import {
+    AmbientLight,
+    DirectionalLight,
+    Object3D,
+    PerspectiveCamera,
+    PointLight,
+    Scene,
+    SpotLight,
+    WebGLRenderer,
+    type Group
+} from 'three'
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
+import { GLTFLoader, type GLTF } from 'three/addons/loaders/GLTFLoader.js'
 import { getRoad, getRoadParts, type RoadModel, type RoadSegment } from './data'
 
 type LoadedRoadModel = RoadModel & {
@@ -10,23 +20,23 @@ type LoadedRoadModel = RoadModel & {
 const models: {
     road: LoadedRoadModel[]
     index?: number
-    current?: THREE.Object3D
+    current?: Object3D
 } = {
     road: []
 }
 
-const scene = new THREE.Scene()
-const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000)
+const scene = new Scene()
+const camera = new PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000)
 camera.position.set(5, 5, 5)
 
-const renderer = new THREE.WebGLRenderer()
+const renderer = new WebGLRenderer()
 renderer.setSize(window.innerWidth, window.innerHeight)
 document.body.appendChild(renderer.domElement)
 
 const controls = new OrbitControls(camera, renderer.domElement)
 
-scene.add(new THREE.AmbientLight(0x404040))
-scene.add(new THREE.DirectionalLight(0xffffff, 0.5))
+scene.add(new AmbientLight(0x404040))
+scene.add(new DirectionalLight(0xffffff, 0.5))
 
 const loadModel = (url: string): Promise<GLTF> => {
     const loader = new GLTFLoader()
@@ -43,9 +53,9 @@ const loadModel = (url: string): Promise<GLTF> => {
     })
 }
 
-let ambulance: THREE.Group | undefined
-let headLight: THREE.PointLight | undefined
-let headLight2: THREE.PointLight | undefined
+let ambulance: Group | undefined
+let headLight: PointLight | undefined
+let headLight2: PointLight | undefined
 
 void loadModel('/model/cars/ambulance.glb')
     .then((gltf) => {
@@ -54,18 +64,18 @@ void loadModel('/model/cars/ambulance.glb')
         ambulance.position.set(0, 0, 0.15)
         ambulance.rotation.y = -Math.PI / 2
 
-        const frontLight = new THREE.SpotLight(0xffffff, 12, 15, Math.PI / 7, 0.4, 2)
+        const frontLight = new SpotLight(0xffffff, 12, 15, Math.PI / 7, 0.4, 2)
         frontLight.position.set(0, 0.6, -1.6)
         frontLight.target.position.set(0, 0, -10)
         ambulance.add(frontLight)
         ambulance.add(frontLight.target)
 
-        headLight = new THREE.PointLight(0x0e45ea, 2, 5)
+        headLight = new PointLight(0x0e45ea, 2, 5)
         headLight.position.set(-0.4, 1.7, 1.45)
         headLight.visible = true
         ambulance.add(headLight)
 
-        headLight2 = new THREE.PointLight(0x0e45ea, 2, 5)
+        headLight2 = new PointLight(0x0e45ea, 2, 5)
         headLight2.position.set(0.4, 1.7, 1.45)
         headLight2.visible = false
         ambulance.add(headLight2)
@@ -111,7 +121,7 @@ async function initializeRoad(): Promise<void> {
         const roadModel = models.road.find((model) => segment.name === model.name)
         if (!roadModel) throw new Error(`Missing road model: ${segment.name}`)
 
-        const roadPart = new THREE.Object3D()
+        const roadPart = new Object3D()
         const roadPartModel = roadModel.model.scene.clone()
         roadPartModel.position.z = -0.75
         roadPart.add(roadPartModel)
