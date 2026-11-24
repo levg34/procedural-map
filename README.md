@@ -1,6 +1,34 @@
 # procedural-map
 
-Build a 3D map procedurally
+Generate and view a procedural 3D road map with Three.js.
+
+## Run locally
+
+Requires Node.js 22.12 or newer. Install dependencies and start the dev servers:
+
+```sh
+npm ci
+npm run dev
+```
+
+Open `http://localhost:5173`. Vite serves the browser app and proxies API/model requests to Express on port 3210. Press **Space** to preview road models.
+
+For a production build and server, run `npm start` and open `http://localhost:3210`.
+
+## Checks
+
+```sh
+npm test             # Type-check and run Vitest
+npm run format:check # Check formatting with Prettier
+npm run build        # Type-check and create the production client bundle
+```
+
+## Code map
+
+- `index.ts` — Express API and production static-file server.
+- `classes.ts`, `roadData.ts`, `utils.ts` — road generation, connection directions, and model metadata.
+- `src/main.ts`, `src/data.ts` — Three.js scene and browser API calls.
+- `test/` — road-generation tests.
 
 ## Browser debugging helpers
 
