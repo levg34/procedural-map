@@ -9,7 +9,7 @@ const models = {}
 
 const scene = new THREE.Scene()
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000)
-camera.position.set(5,5,5)
+camera.position.set(5, 5, 5)
 
 const renderer = new THREE.WebGLRenderer()
 renderer.setSize(window.innerWidth, window.innerHeight)
@@ -32,11 +32,13 @@ const divisions = 10
 // const axesHelper = new THREE.AxesHelper(5)
 // scene.add(axesHelper)
 
-const loadModel = url => {
+const loadModel = (url) => {
     const loader = new GLTFLoader()
 
     return new Promise((resolve, reject) => {
-        loader.load(url, function (gltf) {
+        loader.load(
+            url,
+            function (gltf) {
                 resolve(gltf)
                 // gltf.animations // Array<THREE.AnimationClip>
                 // gltf.scene // THREE.Group
@@ -45,34 +47,34 @@ const loadModel = url => {
                 // gltf.asset // Object
             },
             function (xhr) {
-                console.log((xhr.loaded / xhr.total * 100) + '% loaded')
+                console.log((xhr.loaded / xhr.total) * 100 + '% loaded')
             },
             function (error) {
-                console.log('An error happened: '+error)
+                console.log('An error happened: ' + error)
             }
         )
     })
 }
 
 let ambulance, headLight, headLight2
-loadModel('/model/cars/ambulance.glb').then(gltf => {
+loadModel('/model/cars/ambulance.glb').then((gltf) => {
     ambulance = gltf.scene
 
-    ambulance.scale.set(0.2,0.2,0.2)
-    ambulance.position.set(0,0,0.15)
-    ambulance.rotation.y = -Math.PI/2
+    ambulance.scale.set(0.2, 0.2, 0.2)
+    ambulance.position.set(0, 0, 0.15)
+    ambulance.rotation.y = -Math.PI / 2
 
     const frontLight = new THREE.PointLight(0xffffff, 2, 15)
-    frontLight.position.set(0,0.6,-1.6)
+    frontLight.position.set(0, 0.6, -1.6)
     ambulance.add(frontLight)
 
     headLight = new THREE.PointLight(0x0e45ea, 2, 5)
-    headLight.position.set(-0.4,1.7,1.45)
+    headLight.position.set(-0.4, 1.7, 1.45)
     ambulance.add(headLight)
     headLight.visible = true
 
     headLight2 = new THREE.PointLight(0x0e45ea, 2, 5)
-    headLight2.position.set(0.4,1.7,1.45)
+    headLight2.position.set(0.4, 1.7, 1.45)
     ambulance.add(headLight2)
     headLight2.visible = false
 
@@ -106,20 +108,20 @@ const loadRP = () => {
     }
 }
 
-getRoadParts().then(res => {
+getRoadParts().then((res) => {
     models.index = 0
-    models.road = res.map(e => {
+    models.road = res.map((e) => {
         e.modelPromise = loadModel(e.url)
         return e
     })
-    Promise.all(models.road.map(e => e.modelPromise)).then(gltfs => {
+    Promise.all(models.road.map((e) => e.modelPromise)).then((gltfs) => {
         gltfs.forEach((gltf, index) => {
             models.road[index].model = gltf
             delete models.road[index].modelPromise
         })
-        getRoad(10).then(res => {
-            res.forEach(e => {
-                const reToAdd = models.road.find(re => e.name === re.name)
+        getRoad(10).then((res) => {
+            res.forEach((e) => {
+                const reToAdd = models.road.find((re) => e.name === re.name)
                 const roadPart = new THREE.Object3D()
                 const roadPartInitial = reToAdd.model.scene.clone()
                 roadPartInitial.position.z = -0.75
@@ -127,7 +129,7 @@ getRoadParts().then(res => {
                 if (e.rotation) {
                     roadPart.rotation.y = e.rotation
                 }
-                roadPart.position.set(e.position.x,e.position.y,e.position.z)
+                roadPart.position.set(e.position.x, e.position.y, e.position.z)
                 scene.add(roadPart)
             })
         })
@@ -136,7 +138,7 @@ getRoadParts().then(res => {
 
 let iter = 0
 const animate = function () {
-	requestAnimationFrame(animate)
+    requestAnimationFrame(animate)
     if (ambulance !== undefined) {
         if (ambulance.position.x < 9) {
             ambulance.position.x += 0.01
@@ -155,12 +157,12 @@ const animate = function () {
         }
         ++iter
     }
-	renderer.render(scene, camera)
+    renderer.render(scene, camera)
 }
 
 animate()
 
-document.addEventListener('keydown',event => {
+document.addEventListener('keydown', (event) => {
     if (event.key === ' ') {
         if (models.index !== undefined) {
             loadRP()
@@ -168,7 +170,7 @@ document.addEventListener('keydown',event => {
     }
 })
 
-window.addEventListener('resize', event => {
+window.addEventListener('resize', (event) => {
     if (camera === undefined || renderer === undefined) return
     camera.aspect = window.innerWidth / window.innerHeight
     camera.updateProjectionMatrix()

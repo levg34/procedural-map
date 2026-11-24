@@ -5,7 +5,9 @@ function doubleEquals(double1, double2) {
 }
 
 function vectors3Equals(vector1, vector2) {
-    return doubleEquals(vector1.x, vector2.x) && doubleEquals(vector1.y, vector2.y) && doubleEquals(vector1.z, vector2.z)
+    return (
+        doubleEquals(vector1.x, vector2.x) && doubleEquals(vector1.y, vector2.y) && doubleEquals(vector1.z, vector2.z)
+    )
 }
 
 module.exports = {
