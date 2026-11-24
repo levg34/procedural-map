@@ -1,6 +1,10 @@
 import { Vector3 } from 'three'
 
-const { getRoadParts } = require('./utils')
+const {
+    getRoadParts
+}: {
+    getRoadParts: () => Promise<RoadPart[]>
+} = require('./utils')
 
 type RoadPartType = {
     url: string
@@ -16,7 +20,6 @@ class RoadPart {
     rotation?: number
 
     constructor(parameters: RoadPartType) {
-        if (!parameters) return
         this.directions =
             parameters.directions instanceof Array ? parameters.directions.map((direction) => direction.clone()) : []
         this.url = parameters.url
@@ -126,13 +129,7 @@ class Road {
     path: LinkedRoadPart[]
 
     static build(length: number): Promise<Road> {
-        return new Promise((resolve, reject) => {
-            getRoadParts()
-                .then((parts: RoadPart[]) => {
-                    resolve(new Road(parts, length))
-                })
-                .catch((err: string) => reject(err))
-        })
+        return getRoadParts().then((parts) => new Road(parts, length))
     }
 
     constructor(parts: RoadPart[], length: number) {
@@ -143,12 +140,16 @@ class Road {
 
     createPath(length: number, turns: number) {
         const end = this.getRoadPartByName('road_end')
+        if (!end) throw new Error('Required road part not found: road_end')
+
         const start = end.clone()
         start.rotate(Math.PI)
         this.connect(start)
         this.connectAll(this.createStraightLine(length))
         for (let index = 0; index < turns; index++) {
             const turn = this.getRoadPartByName('road_bend')
+            if (!turn) throw new Error('Required road part not found: road_bend')
+
             this.connect(turn)
             this.connectAll(this.createStraightLine(length))
         }
@@ -162,18 +163,24 @@ class Road {
     connect(part: RoadPart) {
         let linkedRoadPart = new LinkedRoadPart(part)
         if (this.path.length > 0) {
-            const previous = [...this.path].pop()
+            const previous = this.path[this.path.length - 1]
+            if (!previous) throw new Error('Road path is missing its previous segment')
+
             linkedRoadPart = previous.connect(part)
         }
         this.path.push(linkedRoadPart)
     }
 
     createStraightLine(length: number): RoadPart[] {
-        const path = []
+        const path: RoadPart[] = []
         if (length < 2) return path
 
         const straight = this.getRoadPartByName('road_straight')
         const crossing = this.getRoadPartByName('road_crossing')
+        if (!straight || !crossing) {
+            throw new Error('Required road parts not found: road_straight and road_crossing')
+        }
+
         const crossingPosition = Math.floor(length / 2)
 
         for (let i = 0; i < length; ++i) {
@@ -187,7 +194,7 @@ class Road {
         return path
     }
 
-    getRoadPartByName(name: string): RoadPart {
+    getRoadPartByName(name: string): RoadPart | null {
         const part = this.parts.find((part) => part.name === name)
         if (part instanceof RoadPart) {
             return part.clone()
