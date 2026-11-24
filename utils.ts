@@ -2,12 +2,15 @@ import { readdir } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import type { Vector3 } from 'three'
-import { roadTypes } from './roadData'
+import { roadConnectionOffsets, roadFootprints, roadTypes } from './roadData'
+import type { RoadFootprint } from './roadData'
 
 export type RoadPartMetadata = {
     url: string
     name: string
     directions?: Vector3[]
+    footprint?: RoadFootprint
+    connectionOffsets?: Vector3[]
 }
 
 const modelDirectory = join(dirname(fileURLToPath(import.meta.url)), 'models', 'road')
@@ -22,7 +25,9 @@ export async function getRoadParts(): Promise<RoadPartMetadata[]> {
             const name = file.slice(0, -4)
             const roadPart: RoadPartMetadata = {
                 url: `/model/road/${file}`,
-                name
+                name,
+                footprint: roadFootprints[name] ?? { width: 1, depth: 1 },
+                connectionOffsets: roadConnectionOffsets[name]?.map((offset) => offset.clone())
             }
             const configuration = configurations.find((item) => item.for.includes(name))
 

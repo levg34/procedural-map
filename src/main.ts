@@ -11,7 +11,7 @@ import {
 } from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { GLTFLoader, type GLTF } from 'three/addons/loaders/GLTFLoader.js'
-import { getRoad, getRoadParts, type RoadModel, type RoadSegment } from './data'
+import { getRoadParts, getRoadShowcase, type RoadModel, type RoadSegment } from './data'
 
 type LoadedRoadModel = RoadModel & {
     model: GLTF
@@ -118,7 +118,7 @@ async function initializeRoad(): Promise<void> {
     )
     models.index = 0
 
-    const road = await getRoad(10)
+    const road = await getRoadShowcase()
     road.forEach((segment: RoadSegment) => {
         const roadModel = models.road.find((model) => segment.name === model.name)
         if (!roadModel) throw new Error(`Missing road model: ${segment.name}`)

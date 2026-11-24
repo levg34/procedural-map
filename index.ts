@@ -14,6 +14,16 @@ app.get('/', (_req, res) => {
     res.sendFile(join(rootDirectory, 'dist', 'index.html'))
 })
 
+app.get('/road/showcase', async (_req, res) => {
+    try {
+        const road = await Road.buildShowcase()
+        res.json(road.getPath())
+    } catch (error) {
+        console.error(error)
+        res.status(500).json({ error: error instanceof Error ? error.message : String(error) })
+    }
+})
+
 app.get('/road/:length', async (req, res) => {
     const length = Number(req.params.length)
     if (!Number.isInteger(length) || length < 2) {

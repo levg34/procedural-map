@@ -17,6 +17,29 @@ describe('RoadPart', function () {
         part = new RoadPart(partData)
         clonedPart = part.clone()
     })
+    it('should include measured footprints and off-center connector locations', async () => {
+        const parts = await getRoadParts()
+        const partsByName = new Map(parts.map((part) => [part.name, part]))
+
+        assert.deepStrictEqual(partsByName.get('road_curve')?.footprint, { width: 2, depth: 2 })
+        assert.deepStrictEqual(partsByName.get('road_roundabout')?.footprint, { width: 3, depth: 3 })
+        assert.deepStrictEqual(partsByName.get('road_split')?.footprint, { width: 1, depth: 2 })
+        assert.deepStrictEqual(partsByName.get('road_curve')?.connectionOffsets, [
+            new Vector3(1, 0, 0.5),
+            new Vector3(-0.5, 0, -1)
+        ])
+        assert.deepStrictEqual(partsByName.get('road_curveIntersection')?.connectionOffsets, [
+            new Vector3(1, 0, 0.5),
+            new Vector3(-1, 0, 0.5),
+            new Vector3(-0.5, 0, -1)
+        ])
+        for (const name of ['road_side', 'road_sideEntry', 'road_sideExit']) {
+            assert.deepStrictEqual(partsByName.get(name)?.connectionOffsets, [
+                new Vector3(0.5, 0, -0.155),
+                new Vector3(-0.5, 0, -0.155)
+            ])
+        }
+    })
     describe('rotate', () => {
         it('should rotate all directions', () => {
             const expected = [new Vector3(0, 0, -1), new Vector3(-1, 0, 0)]
@@ -38,6 +61,19 @@ describe('RoadPart', function () {
             isolatedPart.rotate(Math.PI / 2)
 
             assert.deepStrictEqual(direction, new Vector3(1, 0, 0))
+        })
+        it('should rotate its footprint with the part', () => {
+            const part = new RoadPart({
+                url: '',
+                name: 'split',
+                directions: [],
+                footprint: { width: 1, depth: 2 }
+            })
+
+            part.rotate(Math.PI / 2)
+
+            assert.ok(doubleEquals(part.getFootprint().width, 2))
+            assert.ok(doubleEquals(part.getFootprint().depth, 1))
         })
     })
     describe('clone', () => {
@@ -153,6 +189,46 @@ describe('LinkedRoadPart', () => {
             assert.deepStrictEqual(nextPart.directions, [new Vector3(1, 0, 0), new Vector3(-1, 0, 0)])
         })
 
+        it('should place larger parts by their connection edges', () => {
+            const source = new LinkedRoadPart(
+                new RoadPart({
+                    url: '',
+                    name: 'roundabout',
+                    directions: [new Vector3(1, 0, 0), new Vector3(-1, 0, 0)],
+                    footprint: { width: 3, depth: 3 }
+                })
+            )
+            const target = new RoadPart({
+                url: '',
+                name: 'straight',
+                directions: [new Vector3(1, 0, 0), new Vector3(-1, 0, 0)]
+            })
+
+            const connected = source.connect(target)
+
+            assert.ok(vectors3Equals(connected.position, new Vector3(2, 0, 0)))
+        })
+
+        it('should align off-center connectors', () => {
+            const curve = new RoadPart({
+                url: '',
+                name: 'curve',
+                directions: [new Vector3(1, 0, 0), new Vector3(0, 0, -1)],
+                footprint: { width: 2, depth: 2 },
+                connectionOffsets: [new Vector3(1, 0, 0.5), new Vector3(-0.5, 0, -1)]
+            })
+            const source = new LinkedRoadPart(curve)
+            const straightPart = new RoadPart({
+                url: '',
+                name: 'straight',
+                directions: [new Vector3(1, 0, 0), new Vector3(-1, 0, 0)]
+            })
+
+            const connected = source.connect(straightPart)
+
+            assert.ok(vectors3Equals(connected.position, new Vector3(1.5, 0, 0.5)))
+        })
+
         it('should not use a direction that is already being used', () => {
             const source = new LinkedRoadPart(
                 new RoadPart({
@@ -197,6 +273,92 @@ describe('Road', () => {
             assert.strictEqual(
                 road.createStraightLine(straightLength).filter((e) => e.name === 'road_crossing').length,
                 1
+            )
+        })
+    })
+
+    describe('Road showcase', () => {
+        it('should include every configured connectable road part exactly once', async () => {
+            const road = await Road.buildShowcase()
+            const availableNames = (await getRoadParts())
+                .filter((part) => part.directions !== undefined)
+                .map((part) => part.name)
+            const expectedNames = Object.values(roadTypes)
+                .filter((type) => type.directions.length !== 1)
+                .flatMap((type) => type.for)
+                .filter((name) => availableNames.includes(name))
+            const actualNames = road.path.map((part) => part.name)
+
+            assert.deepStrictEqual(
+                actualNames.filter((name) => expectedNames.includes(name)).sort(),
+                [...expectedNames].sort()
+            )
+            expectedNames.forEach((name) => {
+                assert.strictEqual(actualNames.filter((actualName) => actualName === name).length, 1)
+            })
+        })
+
+        it('should be continuous and avoid overlapping parts', async () => {
+            const road = await Road.buildShowcase()
+            const connectedRoad = road.path.filter((part) => part.directions.length > 0)
+
+            for (let index = 1; index < connectedRoad.length; index++) {
+                const previous = connectedRoad[index - 1]
+                const current = connectedRoad[index]
+                assert.ok(previous && current)
+                assert.ok(
+                    previous.usedDirections.some((previousDirection) =>
+                        current.usedDirections.some(
+                            (currentDirection) =>
+                                vectors3Equals(previousDirection.clone().add(currentDirection), new Vector3()) &&
+                                vectors3Equals(
+                                    previous.position.clone().add(previous.getConnectionOffset(previousDirection)),
+                                    current.position.clone().add(current.getConnectionOffset(currentDirection))
+                                )
+                        )
+                    ),
+                    `${previous.name} at ${previous.position.toArray()} is not connected to ${current.name} at ${current.position.toArray()}`
+                )
+            }
+
+            for (let index = 0; index < road.path.length; index++) {
+                const part = road.path[index]
+                assert.ok(part)
+                const footprint = part.getFootprint()
+
+                for (let otherIndex = index + 1; otherIndex < road.path.length; otherIndex++) {
+                    const other = road.path[otherIndex]
+                    assert.ok(other)
+                    const otherFootprint = other.getFootprint()
+                    const overlapsX =
+                        Math.abs(part.position.x - other.position.x) <
+                        (footprint.width + otherFootprint.width) / 2 - 0.000001
+                    const overlapsZ =
+                        Math.abs(part.position.z - other.position.z) <
+                        (footprint.depth + otherFootprint.depth) / 2 - 0.000001
+
+                    assert.ok(
+                        !overlapsX || !overlapsZ,
+                        `Parts ${part.name} and ${other.name} overlap at ${part.position.toArray()} and ${other.position.toArray()}`
+                    )
+                }
+            }
+
+            const noEntry = road.path.find((part) => part.name === 'road_square')
+            assert.ok(noEntry)
+            assert.ok(
+                connectedRoad.some((part) =>
+                    part.getAvailableDirections().some((direction) =>
+                        vectors3Equals(
+                            part.position
+                                .clone()
+                                .add(part.getConnectionOffset(direction))
+                                .add(direction.clone().multiplyScalar(noEntry.getHalfExtentAlong(direction))),
+                            noEntry.position
+                        )
+                    )
+                ),
+                'No-entry tile should occupy an unused intersection branch'
             )
         })
     })
