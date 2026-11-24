@@ -1,21 +1,23 @@
-const { RoadPart, Road, LinkedRoadPart } = require('../classes.js')
-const assert = require('assert')
-const { getRoadParts } = require('../utils.js')
-const { Vector3 } = require('three')
-const { roadTypes } = require('../roadData')
-const { vectors3Equals, doubleEquals } = require('./testUtils.js')
+import assert from 'node:assert/strict'
+import { Vector3 } from 'three'
+import { beforeAll, describe, it } from 'vitest'
+import classes from '../classes.js'
+import roadData from '../roadData.js'
+import utils from '../utils.js'
+import testUtils from './testUtils.js'
+
+const { RoadPart, Road, LinkedRoadPart } = classes
+const { getRoadParts } = utils
+const { roadTypes } = roadData
+const { vectors3Equals, doubleEquals } = testUtils
 
 describe('RoadPart', function () {
     let part
     let clonedPart
-    before((done) => {
-        getRoadParts()
-            .then((parts) => {
-                part = new RoadPart(parts[11])
-                clonedPart = part.clone()
-                done()
-            })
-            .catch((err) => done(err))
+    beforeAll(async () => {
+        const parts = await getRoadParts()
+        part = new RoadPart(parts[11])
+        clonedPart = part.clone()
     })
     describe('rotate', () => {
         it('should rotate all directions', () => {
@@ -62,16 +64,12 @@ describe('RoadPart', function () {
 describe('LinkedRoadPart', () => {
     let linkedPart
     let straight
-    before((done) => {
-        getRoadParts()
-            .then((parts) => {
-                const bend = new RoadPart(parts[11])
-                linkedPart = new LinkedRoadPart(bend)
-                const straightPart = parts.find((part) => part.name === 'road_straight')
-                straight = new RoadPart(straightPart)
-                done()
-            })
-            .catch((err) => done(err))
+    beforeAll(async () => {
+        const parts = await getRoadParts()
+        const bend = new RoadPart(parts[11])
+        linkedPart = new LinkedRoadPart(bend)
+        const straightPart = parts.find((part) => part.name === 'road_straight')
+        straight = new RoadPart(straightPart)
     })
     describe('translate', () => {
         it('should translate the position', () => {
@@ -165,13 +163,8 @@ describe('LinkedRoadPart', () => {
 describe('Road', () => {
     const roadLength = 10
     let road = null
-    before((done) => {
-        Road.build(roadLength)
-            .then((res) => {
-                road = res
-                done()
-            })
-            .catch((err) => done(err))
+    beforeAll(async () => {
+        road = await Road.build(roadLength)
     })
     describe('create straight line', function () {
         const straightLength = 5

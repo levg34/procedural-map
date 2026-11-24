@@ -4,8 +4,8 @@
     "description": "procedural map creation",
     "main": "index.js",
     "scripts": {
-        "mocha": "mocha",
-        "test": "run-s compile-ts mocha",
+        "vitest": "vitest run",
+        "test": "run-s compile-ts vitest",
         "compile-ts": "tsc --types node --module commonjs classes.ts",
         "ts-watch": "tsc --types node --module commonjs -w classes.ts",
         "build": "vite build",
@@ -14,7 +14,7 @@
         "start-server": "node index.js",
         "dev-server": "nodemon --watch index.js --watch classes.js --watch utils.js --watch roadData.js index.js",
         "dev": "run-p ts-watch dev-server vite",
-        "build-test-start": "run-s compile-ts mocha build start-server"
+        "build-test-start": "run-s compile-ts vitest build start-server"
     },
     "repository": {
         "type": "git",
@@ -29,15 +29,15 @@
     "devDependencies": {
         "@types/node": "^26.6.6",
         "@types/three": "^0.187.0",
-        "mocha": "^9.0.1",
         "nodemon": "^3.1.14",
         "npm-run-all": "^4.1.5",
         "prettier": "^3.10.1",
         "typescript": "^7.0.2",
-        "vite": "^8.3.8"
+        "vite": "^8.3.8",
+        "vitest": "^5.1.1"
     },
     "dependencies": {
         "express": "^4.17.1",
-        "three": "^0.129.0"
+        "three": "^0.187.0"
     }
 }
