@@ -30,6 +30,14 @@ describe('RoadPart', function () {
         it('should add to rotation', () => {
             assert.ok(doubleEquals(part.rotation, Math.PI / 2))
         })
+        it('should not mutate directions supplied to its constructor', () => {
+            const direction = new Vector3(1, 0, 0)
+            const isolatedPart = new RoadPart({ url: '', name: 'straight', directions: [direction] })
+
+            isolatedPart.rotate(Math.PI / 2)
+
+            assert.deepStrictEqual(direction, new Vector3(1, 0, 0))
+        })
     })
     describe('clone', () => {
         it('should return an instance of RoadPart', () => {
@@ -85,6 +93,27 @@ describe('LinkedRoadPart', () => {
             const selected = linkedPart.selectDirection()
             assert.ok(!linkedPart.getAvailableDirections().includes(selected))
         })
+        it('should find a connection after rotating a part already beyond 270 degrees', () => {
+            const rotatedPart = new LinkedRoadPart(
+                new RoadPart({
+                    url: '',
+                    name: 'straight',
+                    rotation: 2 * Math.PI,
+                    directions: [new Vector3(0, 0, 1), new Vector3(0, 0, -1)]
+                })
+            )
+            const rotate = rotatedPart.rotate.bind(rotatedPart)
+            let rotationCount = 0
+            rotatedPart.rotate = (angle) => {
+                rotationCount++
+                assert.ok(rotationCount <= 4, 'Direction selection rotated more than four times')
+                rotate(angle)
+            }
+
+            const selected = rotatedPart.selectDirection(new Vector3(1, 0, 0))
+
+            assert.ok(vectors3Equals(selected, new Vector3(-1, 0, 0)))
+        })
     })
     describe('connect', () => {
         it('should connect parts by their available directions', () => {
@@ -106,6 +135,7 @@ describe('LinkedRoadPart', () => {
             assert.ok(vectors3Equals(connected.position, new Vector3(1, 0, 0)))
             assert.ok(vectors3Equals(source.usedDirections[0], new Vector3(1, 0, 0)))
             assert.ok(vectors3Equals(connected.usedDirections[0], new Vector3(-1, 0, 0)))
+            assert.deepStrictEqual(connected.getAvailableDirections(), [new Vector3(1, 0, 0)])
             assert.deepStrictEqual(nextPart.directions, [new Vector3(1, 0, 0), new Vector3(-1, 0, 0)])
         })
 
@@ -194,6 +224,16 @@ describe('Road', () => {
                     previous.usedDirections.some((usedDirection) => vectors3Equals(usedDirection, direction)),
                     `${previous.name} at ${previous.position.toArray()} is not connected to ${current.name} at ${current.position.toArray()}`
                 )
+            }
+        })
+        it('should not place multiple parts at the same position', () => {
+            for (let index = 0; index < road.path.length; index++) {
+                for (let otherIndex = index + 1; otherIndex < road.path.length; otherIndex++) {
+                    assert.ok(
+                        !vectors3Equals(road.path[index].position, road.path[otherIndex].position),
+                        `Parts ${index} and ${otherIndex} overlap at ${road.path[index].position.toArray()}`
+                    )
+                }
             }
         })
         it('should have a start and an end', () => {

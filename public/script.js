@@ -50,46 +50,50 @@ const loadModel = (url) => {
                 console.log((xhr.loaded / xhr.total) * 100 + '% loaded')
             },
             function (error) {
-                console.log('An error happened: ' + error)
+                reject(error)
             }
         )
     })
 }
 
 let ambulance, headLight, headLight2
-loadModel('/model/cars/ambulance.glb').then((gltf) => {
-    ambulance = gltf.scene
+loadModel('/model/cars/ambulance.glb')
+    .then((gltf) => {
+        ambulance = gltf.scene
 
-    ambulance.scale.set(0.2, 0.2, 0.2)
-    ambulance.position.set(0, 0, 0.15)
-    ambulance.rotation.y = -Math.PI / 2
+        ambulance.scale.set(0.2, 0.2, 0.2)
+        ambulance.position.set(0, 0, 0.15)
+        ambulance.rotation.y = -Math.PI / 2
 
-    const frontLight = new THREE.PointLight(0xffffff, 2, 15)
-    frontLight.position.set(0, 0.6, -1.6)
-    ambulance.add(frontLight)
+        const frontLight = new THREE.PointLight(0xffffff, 2, 15)
+        frontLight.position.set(0, 0.6, -1.6)
+        ambulance.add(frontLight)
 
-    headLight = new THREE.PointLight(0x0e45ea, 2, 5)
-    headLight.position.set(-0.4, 1.7, 1.45)
-    ambulance.add(headLight)
-    headLight.visible = true
+        headLight = new THREE.PointLight(0x0e45ea, 2, 5)
+        headLight.position.set(-0.4, 1.7, 1.45)
+        ambulance.add(headLight)
+        headLight.visible = true
 
-    headLight2 = new THREE.PointLight(0x0e45ea, 2, 5)
-    headLight2.position.set(0.4, 1.7, 1.45)
-    ambulance.add(headLight2)
-    headLight2.visible = false
+        headLight2 = new THREE.PointLight(0x0e45ea, 2, 5)
+        headLight2.position.set(0.4, 1.7, 1.45)
+        ambulance.add(headLight2)
+        headLight2.visible = false
 
-    // const gui = new GUI()
-    // const lightFolder = gui.addFolder("Cube")
-    // lightFolder.add(headLight.position, "x", -2, 2, 0.05)
-    // lightFolder.add(headLight.position, "y", -2, 2, 0.05)
-    // lightFolder.add(headLight.position, "z", -2, 2, 0.05)
+        // const gui = new GUI()
+        // const lightFolder = gui.addFolder("Cube")
+        // lightFolder.add(headLight.position, "x", -2, 2, 0.05)
+        // lightFolder.add(headLight.position, "y", -2, 2, 0.05)
+        // lightFolder.add(headLight.position, "z", -2, 2, 0.05)
 
-    // const sphereSize = 0.1
-    // const pointLightHelper = new THREE.PointLightHelper(headLight, sphereSize)
-    // scene.add( pointLightHelper )
+        // const sphereSize = 0.1
+        // const pointLightHelper = new THREE.PointLightHelper(headLight, sphereSize)
+        // scene.add( pointLightHelper )
 
-    scene.add(ambulance)
-})
+        scene.add(ambulance)
+    })
+    .catch((error) => {
+        console.error('Failed to load ambulance model:', error)
+    })
 
 const loadRP = () => {
     if (models.index > 0) {
@@ -108,33 +112,39 @@ const loadRP = () => {
     }
 }
 
-getRoadParts().then((res) => {
-    models.index = 0
-    models.road = res.map((e) => {
-        e.modelPromise = loadModel(e.url)
-        return e
-    })
-    Promise.all(models.road.map((e) => e.modelPromise)).then((gltfs) => {
-        gltfs.forEach((gltf, index) => {
-            models.road[index].model = gltf
-            delete models.road[index].modelPromise
+getRoadParts()
+    .then((res) => {
+        models.road = res.map((e) => {
+            e.modelPromise = loadModel(e.url)
+            return e
         })
-        getRoad(10).then((res) => {
-            res.forEach((e) => {
-                const reToAdd = models.road.find((re) => e.name === re.name)
-                const roadPart = new THREE.Object3D()
-                const roadPartInitial = reToAdd.model.scene.clone()
-                roadPartInitial.position.z = -0.75
-                roadPart.add(roadPartInitial)
-                if (e.rotation) {
-                    roadPart.rotation.y = e.rotation
-                }
-                roadPart.position.set(e.position.x, e.position.y, e.position.z)
-                scene.add(roadPart)
+        return Promise.all(models.road.map((e) => e.modelPromise)).then((gltfs) => {
+            gltfs.forEach((gltf, index) => {
+                models.road[index].model = gltf
+                delete models.road[index].modelPromise
             })
+            models.index = 0
+            return getRoad(10)
         })
     })
-})
+    .then((road) => {
+        road.forEach((e) => {
+            const reToAdd = models.road.find((re) => e.name === re.name)
+            if (!reToAdd) throw new Error(`Missing road model: ${e.name}`)
+            const roadPart = new THREE.Object3D()
+            const roadPartInitial = reToAdd.model.scene.clone()
+            roadPartInitial.position.z = -0.75
+            roadPart.add(roadPartInitial)
+            if (e.rotation) {
+                roadPart.rotation.y = e.rotation
+            }
+            roadPart.position.set(e.position.x, e.position.y, e.position.z)
+            scene.add(roadPart)
+        })
+    })
+    .catch((error) => {
+        console.error('Failed to initialize road:', error)
+    })
 
 let iter = 0
 const animate = function () {

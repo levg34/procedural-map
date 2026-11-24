@@ -17,7 +17,8 @@ class RoadPart {
 
     constructor(parameters: RoadPartType) {
         if (!parameters) return
-        this.directions = parameters.directions instanceof Array ? parameters.directions : []
+        this.directions =
+            parameters.directions instanceof Array ? parameters.directions.map((direction) => direction.clone()) : []
         this.url = parameters.url
         this.name = parameters.name
         if (parameters.rotation || parameters.rotation === 0) {
@@ -79,19 +80,21 @@ class LinkedRoadPart extends RoadPart {
                 (dir) => dir.clone().add(direction).length() < 0.0000001
             )
             if (connectDirection instanceof Vector3) {
-                nextDirection = connectDirection.clone()
+                nextDirection = connectDirection
             } else {
-                let connectDirectionRotated: Vector3 | null = null
-                while (!(connectDirectionRotated instanceof Vector3) || this.rotation > (3 * Math.PI) / 2) {
+                let connectDirectionRotated: Vector3 | undefined
+                let rotations = 0
+                while (!(connectDirectionRotated instanceof Vector3) && rotations < 4) {
                     this.rotate(Math.PI / 2)
+                    rotations++
                     connectDirectionRotated = this.getAvailableDirections().find(
                         (dir) => dir.clone().add(direction).length() < 0.0000001
                     )
                 }
                 if (!(connectDirectionRotated instanceof Vector3)) {
-                    throw new Error('Cound not connect to direction !')
+                    throw new Error('Could not connect to direction')
                 } else {
-                    nextDirection = connectDirectionRotated.clone()
+                    nextDirection = connectDirectionRotated
                 }
             }
         }

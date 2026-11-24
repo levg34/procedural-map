@@ -15,18 +15,28 @@ app.get('/', (req, res) => {
 })
 
 app.get('/road/:length', (req, res) => {
-    const length = req.params.length ? req.params.length : 5
+    const length = Number(req.params.length)
+    if (!Number.isInteger(length) || length < 2) {
+        return res.status(400).json({ error: 'Road length must be an integer of at least 2' })
+    }
+
     Road.build(length)
         .then((road) => {
             res.json(road.getPath())
         })
-        .catch((err) => res.status(500).json({ error: err }))
+        .catch((err) => {
+            console.error(err)
+            res.status(500).json({ error: err instanceof Error ? err.message : String(err) })
+        })
 })
 
 app.get('/road_parts', (req, res) => {
     getRoadParts()
         .then((parts) => res.json(parts))
-        .catch((err) => res.status(500).json({ error: err }))
+        .catch((err) => {
+            console.error(err)
+            res.status(500).json({ error: err instanceof Error ? err.message : String(err) })
+        })
 })
 
 app.get('/model/:type/:model', (req, res, next) => {

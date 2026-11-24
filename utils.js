@@ -1,10 +1,11 @@
 const fs = require('fs')
+const path = require('path')
 
 const confs = Object.values(require('./roadData').roadTypes)
 
 function getRoadParts() {
     return new Promise((resolve, reject) => {
-        fs.readdir('./models/road', (err, files) => {
+        fs.readdir(path.join(__dirname, 'models', 'road'), (err, files) => {
             if (err) return reject(err)
             const models = files
                 .filter((file) => !file.endsWith('.txt'))
