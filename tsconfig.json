@@ -1,0 +1,16 @@
+{
+    "compilerOptions": {
+        "target": "ES2022",
+        "module": "NodeNext",
+        "moduleResolution": "NodeNext",
+        "strict": true,
+        "noEmit": true,
+        "allowImportingTsExtensions": true,
+        "verbatimModuleSyntax": true,
+        "esModuleInterop": true,
+        "skipLibCheck": true,
+        "types": ["node"],
+        "forceConsistentCasingInFileNames": true
+    },
+    "include": ["classes.ts", "index.ts", "roadData.ts", "utils.ts", "src/**/*.ts", "test/**/*.ts", "vite.config.ts"]
+}

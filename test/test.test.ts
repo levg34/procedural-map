@@ -1,22 +1,20 @@
 import assert from 'node:assert/strict'
 import { Vector3 } from 'three'
-import { beforeAll, describe, it } from 'vitest'
-import classes from '../classes.js'
-import roadData from '../roadData.js'
-import utils from '../utils.js'
-import testUtils from './testUtils.js'
-
-const { RoadPart, Road, LinkedRoadPart } = classes
-const { getRoadParts } = utils
-const { roadTypes } = roadData
-const { vectors3Equals, doubleEquals } = testUtils
+import { beforeAll, describe, it, vi } from 'vitest'
+import { LinkedRoadPart, Road, RoadPart } from '../classes.ts'
+import { roadTypes } from '../roadData.ts'
+import { getRoadParts } from '../utils.ts'
+import { doubleEquals, vectors3Equals } from './testUtils.ts'
 
 describe('RoadPart', function () {
-    let part
-    let clonedPart
+    let part: RoadPart
+    let clonedPart: RoadPart
     beforeAll(async () => {
         const parts = await getRoadParts()
-        part = new RoadPart(parts[11])
+        const partData = parts[11]
+        if (!partData) throw new Error('Required test road part is missing')
+
+        part = new RoadPart(partData)
         clonedPart = part.clone()
     })
     describe('rotate', () => {
@@ -26,11 +24,12 @@ describe('RoadPart', function () {
             clonedPart.rotate(Math.PI / 2)
             // assert.deepStrictEqual(part.directions,expected)
             part.directions.forEach((dir, index) => {
-                assert.ok(vectors3Equals(dir, expected[index]))
+                const expectedDirection = expected[index]
+                assert.ok(expectedDirection && vectors3Equals(dir, expectedDirection))
             })
         })
         it('should add to rotation', () => {
-            assert.ok(doubleEquals(part.rotation, Math.PI / 2))
+            assert.ok(part.rotation !== undefined && doubleEquals(part.rotation, Math.PI / 2))
         })
         it('should not mutate directions supplied to its constructor', () => {
             const direction = new Vector3(1, 0, 0)
@@ -52,24 +51,28 @@ describe('RoadPart', function () {
             assert.notStrictEqual(clonedPart, part)
         })
         it('should not share deep references with the original', () => {
-            Object.keys(clonedPart).forEach((key) => {
-                if (clonedPart[key] instanceof Object || clonedPart[key] instanceof Array) {
-                    assert.notStrictEqual(clonedPart[key], part[key])
-                }
+            assert.notStrictEqual(clonedPart.directions, part.directions)
+            clonedPart.directions.forEach((direction, index) => {
+                const originalDirection = part.directions[index]
+                assert.ok(originalDirection)
+                assert.notStrictEqual(direction, originalDirection)
             })
         })
     })
 })
 
 describe('LinkedRoadPart', () => {
-    let linkedPart
-    let straight
+    let linkedPart: LinkedRoadPart
+    let straight: RoadPart
     beforeAll(async () => {
         const parts = await getRoadParts()
-        const bend = new RoadPart(parts[11])
+        const bendData = parts[11]
+        const straightData = parts.find((part) => part.name === 'road_straight')
+        if (!bendData || !straightData) throw new Error('Required test road parts are missing')
+
+        const bend = new RoadPart(bendData)
         linkedPart = new LinkedRoadPart(bend)
-        const straightPart = parts.find((part) => part.name === 'road_straight')
-        straight = new RoadPart(straightPart)
+        straight = new RoadPart(straightData)
     })
     describe('translate', () => {
         it('should translate the position', () => {
@@ -88,29 +91,42 @@ describe('LinkedRoadPart', () => {
             assert.deepStrictEqual(linkedPart.getAvailableDirections(), linkedPart.directions)
         })
         it('should not return a direction which is being used', () => {
-            const selected = linkedPart.selectDirection()
-            assert.ok(!linkedPart.getAvailableDirections().includes(selected))
+            const connected = linkedPart.connect(straight)
+            assert.strictEqual(connected.getAvailableDirections().length, straight.directions.length - 1)
         })
         it('should find a connection after rotating a part already beyond 270 degrees', () => {
-            const rotatedPart = new LinkedRoadPart(
+            const source = new LinkedRoadPart(
                 new RoadPart({
                     url: '',
                     name: 'straight',
-                    rotation: 2 * Math.PI,
-                    directions: [new Vector3(0, 0, 1), new Vector3(0, 0, -1)]
+                    directions: [new Vector3(1, 0, 0), new Vector3(-1, 0, 0)]
                 })
             )
-            const rotate = rotatedPart.rotate.bind(rotatedPart)
+            const rotatedPart = new RoadPart({
+                url: '',
+                name: 'straight',
+                rotation: 2 * Math.PI,
+                directions: [new Vector3(0, 0, 1), new Vector3(0, 0, -1)]
+            })
+            const originalRotate = RoadPart.prototype.rotate
             let rotationCount = 0
-            rotatedPart.rotate = (angle) => {
+            const rotateSpy = vi.spyOn(RoadPart.prototype, 'rotate').mockImplementation(function (
+                this: RoadPart,
+                angle: number
+            ) {
                 rotationCount++
                 assert.ok(rotationCount <= 4, 'Direction selection rotated more than four times')
-                rotate(angle)
+                originalRotate.call(this, angle)
+            })
+
+            try {
+                const connected = source.connect(rotatedPart)
+
+                assert.ok(vectors3Equals(connected.usedDirections[0], new Vector3(-1, 0, 0)))
+                assert.strictEqual(rotationCount, 1)
+            } finally {
+                rotateSpy.mockRestore()
             }
-
-            const selected = rotatedPart.selectDirection(new Vector3(1, 0, 0))
-
-            assert.ok(vectors3Equals(selected, new Vector3(-1, 0, 0)))
         })
     })
     describe('connect', () => {
@@ -162,7 +178,7 @@ describe('LinkedRoadPart', () => {
 
 describe('Road', () => {
     const roadLength = 10
-    let road = null
+    let road: Road
     beforeAll(async () => {
         road = await Road.build(roadLength)
     })
@@ -191,7 +207,9 @@ describe('Road', () => {
             assert.notStrictEqual(road.getRoadPartByName(partName), undefined)
         })
         it('should return the correct part', () => {
-            assert.strictEqual(road.getRoadPartByName(partName).name, partName)
+            const part = road.getRoadPartByName(partName)
+            assert.ok(part)
+            assert.strictEqual(part.name, partName)
         })
     })
     describe('create road', function () {

@@ -1,11 +1,16 @@
-const { Vector3 } = require('three')
+import { Vector3 } from 'three'
 
-const turn = {
+export type RoadTypeConfig = {
+    for: string[]
+    directions: Vector3[]
+}
+
+const turn: RoadTypeConfig = {
     for: ['road_bend', 'road_bendSquare', 'road_bendSidewalk', 'road_curve', 'road_curvePavement'],
     directions: [new Vector3(1, 0, 0), new Vector3(0, 0, -1)]
 }
 
-const straight = {
+const straight: RoadTypeConfig = {
     for: [
         'road_crossing',
         'road_drivewayDouble',
@@ -19,28 +24,31 @@ const straight = {
     directions: [new Vector3(1, 0, 0), new Vector3(-1, 0, 0)]
 }
 
-const allDirections = {
+const allDirections: RoadTypeConfig = {
     for: ['road_crossroad', 'road_crossroadLine', 'road_crossroadPath', 'road_roundabout'],
     directions: [new Vector3(1, 0, 0), new Vector3(-1, 0, 0), new Vector3(0, 0, 1), new Vector3(0, 0, -1)]
 }
 
-const tripleIntersection = {
+const tripleIntersection: RoadTypeConfig = {
     for: ['road_curveIntersection', 'road_intersection', 'road_intersectionLine', 'road_intersectionPath'],
     directions: [new Vector3(1, 0, 0), new Vector3(-1, 0, 0), new Vector3(0, 0, -1)]
 }
 
-const roadEnd = {
+const roadEnd: RoadTypeConfig = {
     for: ['road_end'],
     directions: [new Vector3(-1, 0, 0)]
 }
 
-const noEntry = {
+const noEntry: RoadTypeConfig = {
     for: ['road_square'],
     directions: []
 }
 
-const roadTypes = { turn, straight, allDirections, tripleIntersection, roadEnd, noEntry }
-
-module.exports = {
-    roadTypes
+export const roadTypes: Record<string, RoadTypeConfig> = {
+    turn,
+    straight,
+    allDirections,
+    tripleIntersection,
+    roadEnd,
+    noEntry
 }

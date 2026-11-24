@@ -1,15 +1,8 @@
 import { Vector3 } from 'three'
+import { getRoadParts } from './utils.ts'
+import type { RoadPartMetadata } from './utils.ts'
 
-const {
-    getRoadParts
-}: {
-    getRoadParts: () => Promise<RoadPart[]>
-} = require('./utils')
-
-type RoadPartType = {
-    url: string
-    name: string
-    directions?: Vector3[]
+type RoadPartType = RoadPartMetadata & {
     rotation?: number
 }
 
@@ -29,7 +22,7 @@ class RoadPart {
         }
     }
 
-    rotate(angle: number) {
+    rotate(angle: number): void {
         this.directions = this.directions.map((direction: Vector3) =>
             direction.applyAxisAngle(new Vector3(0, 1, 0), angle)
         )
@@ -67,7 +60,7 @@ class LinkedRoadPart extends RoadPart {
         this.usedDirections = usedDirections instanceof Array ? usedDirections : []
     }
 
-    translate(newPosition: Vector3) {
+    translate(newPosition: Vector3): void {
         this.position.add(newPosition)
     }
 
@@ -114,8 +107,7 @@ class LinkedRoadPart extends RoadPart {
         nextRoadPart.translate(this.position)
         const direction = this.selectDirection()
         nextRoadPart.translate(direction)
-        const nextDir = nextRoadPart.selectDirection(direction)
-        // console.log(this.name+' -> '+next.name, nextDir)
+        nextRoadPart.selectDirection(direction)
         return nextRoadPart
     }
 
@@ -132,13 +124,13 @@ class Road {
         return getRoadParts().then((parts) => new Road(parts, length))
     }
 
-    constructor(parts: RoadPart[], length: number) {
-        this.parts = parts.map((part: RoadPart) => new RoadPart(part))
+    constructor(parts: RoadPartMetadata[], length: number) {
+        this.parts = parts.map((part) => new RoadPart(part))
         this.path = []
         this.createPath(length, 5)
     }
 
-    createPath(length: number, turns: number) {
+    createPath(length: number, turns: number): void {
         const end = this.getRoadPartByName('road_end')
         if (!end) throw new Error('Required road part not found: road_end')
 
@@ -156,11 +148,11 @@ class Road {
         this.connect(end)
     }
 
-    connectAll(parts: RoadPart[]) {
+    connectAll(parts: RoadPart[]): void {
         parts.forEach((part) => this.connect(part))
     }
 
-    connect(part: RoadPart) {
+    connect(part: RoadPart): void {
         let linkedRoadPart = new LinkedRoadPart(part)
         if (this.path.length > 0) {
             const previous = this.path[this.path.length - 1]
@@ -203,13 +195,9 @@ class Road {
         }
     }
 
-    getPath() {
+    getPath(): LinkedRoadPart[] {
         return this.path
     }
 }
 
-module.exports = {
-    RoadPart,
-    Road,
-    LinkedRoadPart
-}
+export { RoadPart, Road, LinkedRoadPart }
