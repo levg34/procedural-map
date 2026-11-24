@@ -54,9 +54,11 @@ void loadModel('/model/cars/ambulance.glb')
         ambulance.position.set(0, 0, 0.15)
         ambulance.rotation.y = -Math.PI / 2
 
-        const frontLight = new THREE.PointLight(0xffffff, 2, 15)
+        const frontLight = new THREE.SpotLight(0xffffff, 12, 15, Math.PI / 7, 0.4, 2)
         frontLight.position.set(0, 0.6, -1.6)
+        frontLight.target.position.set(0, 0, -10)
         ambulance.add(frontLight)
+        ambulance.add(frontLight.target)
 
         headLight = new THREE.PointLight(0x0e45ea, 2, 5)
         headLight.position.set(-0.4, 1.7, 1.45)
