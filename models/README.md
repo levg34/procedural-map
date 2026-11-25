@@ -108,6 +108,9 @@ available as assets but are not automatically placed by the road generator.
 
 The road preview loads all GLBs in `models/road`. The connected showcase uses
 the subset with connection metadata in [`roadData.ts`](../roadData.ts).
+The plain `road_side` piece has a wider asphalt mouth than standard road tiles.
+The showcase connects it between `road_sideEntry` and `road_sideExit`, which
+provide the width transitions on either side.
 Barrier, bridge, slant, tile, and roadside-prop models are available to preview
 but are not currently placed by the procedural road generator. The split/fork
 pieces are also left out until branch-aware placement is supported.

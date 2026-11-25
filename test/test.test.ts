@@ -4,6 +4,7 @@ import { beforeAll, describe, it, vi } from 'vitest'
 import { LinkedRoadPart, Road, RoadPart } from '../classes'
 import { roadTypes } from '../roadData'
 import { getRoadParts } from '../utils'
+import { createRoadCenterPath, getLanePosition } from '../src/vehiclePath'
 import { doubleEquals, vectors3Equals } from './testUtils'
 
 describe('RoadPart', function () {
@@ -296,6 +297,33 @@ describe('Road', () => {
             expectedNames.forEach((name) => {
                 assert.strictEqual(actualNames.filter((actualName) => actualName === name).length, 1)
             })
+        })
+
+        it('should place the wide side-road between its width-transition pieces', async () => {
+            const road = await Road.buildShowcase()
+            const names = road.path.map((part) => part.name)
+            const entryIndex = names.indexOf('road_sideEntry')
+
+            assert.deepStrictEqual(names.slice(entryIndex, entryIndex + 3), [
+                'road_sideEntry',
+                'road_side',
+                'road_sideExit'
+            ])
+        })
+
+        it('should create two parallel vehicle lanes following the road route', async () => {
+            const road = await Road.buildShowcase()
+            const centerPath = createRoadCenterPath(road.path)
+            const progress = 0.4
+            const forward = getLanePosition(centerPath, progress, 0.16)
+            const reverse = getLanePosition(centerPath, 1 - progress, 0.16, true)
+            const midpoint = centerPath.getPointAt(progress)
+            const laneDistance = forward.position.distanceTo(reverse.position)
+
+            assert.ok(forward.tangent.dot(reverse.tangent) < -0.999)
+            assert.ok(doubleEquals(laneDistance, 0.32))
+            assert.ok(doubleEquals(forward.position.distanceTo(midpoint), 0.16))
+            assert.ok(doubleEquals(reverse.position.distanceTo(midpoint), 0.16))
         })
 
         it('should be continuous and avoid overlapping parts', async () => {

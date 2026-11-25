@@ -6,12 +6,14 @@ import {
     PointLight,
     Scene,
     SpotLight,
+    Vector3,
     WebGLRenderer,
     type Group
 } from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { GLTFLoader, type GLTF } from 'three/addons/loaders/GLTFLoader.js'
 import { getRoadParts, getRoadShowcase, type RoadModel, type RoadSegment } from './data'
+import { createRoadCenterPath, getLanePosition } from './vehiclePath'
 
 type LoadedRoadModel = RoadModel & {
     model: GLTF
@@ -56,13 +58,15 @@ const loadModel = (url: string): Promise<GLTF> => {
 let ambulance: Group | undefined
 let headLight: PointLight | undefined
 let headLight2: PointLight | undefined
+let deliveryCar: Group | undefined
+let roadCenterPath: ReturnType<typeof createRoadCenterPath> | undefined
+let ambulanceProgress = 0
+let deliveryProgress = 0.5
 
 void loadModel('/model/cars/ambulance.glb')
     .then((gltf) => {
         ambulance = gltf.scene
         ambulance.scale.set(0.2, 0.2, 0.2)
-        ambulance.position.set(0, 0, 0.15)
-        ambulance.rotation.y = -Math.PI / 2
 
         const frontLight = new SpotLight(0xffffff, 12, 15, Math.PI / 7, 0.4, 2)
         frontLight.position.set(0, 0.6, -1.6)
@@ -84,6 +88,16 @@ void loadModel('/model/cars/ambulance.glb')
     })
     .catch((error: unknown) => {
         console.error('Failed to load ambulance model:', error)
+    })
+
+void loadModel('/model/cars/delivery.glb')
+    .then((gltf) => {
+        deliveryCar = gltf.scene
+        deliveryCar.scale.set(0.2, 0.2, 0.2)
+        scene.add(deliveryCar)
+    })
+    .catch((error: unknown) => {
+        console.error('Failed to load delivery model:', error)
     })
 
 function loadRoadPreview(): void {
@@ -119,6 +133,7 @@ async function initializeRoad(): Promise<void> {
     models.index = 0
 
     const road = await getRoadShowcase()
+    roadCenterPath = createRoadCenterPath(road)
     road.forEach((segment: RoadSegment) => {
         const roadModel = models.road.find((model) => segment.name === model.name)
         if (!roadModel) throw new Error(`Missing road model: ${segment.name}`)
@@ -140,20 +155,29 @@ void initializeRoad().catch((error: unknown) => {
 })
 
 let iter = 0
-function animate(): void {
+let lastFrameTime = performance.now()
+let previousAmbulancePosition: Vector3 | undefined
+function animate(timestamp = performance.now()): void {
     requestAnimationFrame(animate)
 
-    if (ambulance && headLight && headLight2) {
-        if (ambulance.position.x < 9) {
-            ambulance.position.x += 0.01
-            camera.position.x += 0.01
-            controls.target.x += 0.01
-        } else {
-            ambulance.position.x = 0
-            camera.position.x -= 9 + 0.01
-            controls.target.x -= 9 + 0.01
+    const deltaTime = Math.min((timestamp - lastFrameTime) / 1000, 0.05)
+    lastFrameTime = timestamp
+
+    if (ambulance && headLight && headLight2 && roadCenterPath) {
+        const progressDelta = (2 * deltaTime) / roadCenterPath.getLength()
+        ambulanceProgress = (ambulanceProgress + progressDelta) % 1
+        const ambulancePose = getLanePosition(roadCenterPath, ambulanceProgress, 0.16)
+        ambulance.position.copy(ambulancePose.position)
+        ambulance.rotation.y = Math.atan2(-ambulancePose.tangent.x, -ambulancePose.tangent.z)
+        ambulance.position.y += 0.02
+
+        if (previousAmbulancePosition) {
+            const movement = ambulance.position.clone().sub(previousAmbulancePosition)
+            camera.position.add(movement)
+            controls.target.add(movement)
         }
-        controls.update()
+        previousAmbulancePosition = ambulance.position.clone()
+
         if (iter === 30) {
             headLight.visible = !headLight.visible
             headLight2.visible = !headLight2.visible
@@ -162,6 +186,16 @@ function animate(): void {
         iter++
     }
 
+    if (deliveryCar && roadCenterPath) {
+        const progressDelta = (2 * deltaTime) / roadCenterPath.getLength()
+        deliveryProgress = (deliveryProgress + progressDelta) % 1
+        const deliveryPose = getLanePosition(roadCenterPath, deliveryProgress, 0.16, true)
+        deliveryCar.position.copy(deliveryPose.position)
+        deliveryCar.position.y += 0.02
+        deliveryCar.rotation.y = Math.atan2(-deliveryPose.tangent.x, -deliveryPose.tangent.z)
+    }
+
+    controls.update()
     renderer.render(scene, camera)
 }
 

@@ -191,21 +191,32 @@ class Road {
         start.rotate(Math.PI)
         this.connect(start)
 
+        const sideRoadTransition = ['road_sideEntry', 'road_side', 'road_sideExit'].filter((name) =>
+            this.parts.some((part) => part.name === name && part.directions.length > 1)
+        )
+        const transitionNames = new Set(sideRoadTransition)
         const groups = Object.values(roadTypes)
             .filter((type) => type.directions.length > 1)
             .map((type) =>
                 type.for.filter((name) => this.parts.some((part) => part.name === name && part.directions.length > 1))
             )
+        const roadPartNames: string[] = []
 
-        for (let index = 0; ; index++) {
-            const names = groups.flatMap((group) => (group[index] ? [group[index]] : []))
-            if (names.length === 0) break
+        const groupLength = Math.max(...groups.map((group) => group.length))
+        for (let index = 0; index < groupLength; index++) {
+            const names = groups
+                .flatMap((group) => (group[index] ? [group[index]] : []))
+                .filter((name) => !transitionNames.has(name))
+            roadPartNames.push(...names)
+        }
 
-            for (const name of names) {
-                const part = this.getRoadPartByName(name)
-                if (!part) throw new Error(`Required road part not found: ${name}`)
-                this.connect(part)
-            }
+        const curveIndex = roadPartNames.indexOf('road_curve')
+        roadPartNames.splice(curveIndex < 0 ? roadPartNames.length : curveIndex + 1, 0, ...sideRoadTransition)
+
+        for (const name of roadPartNames) {
+            const part = this.getRoadPartByName(name)
+            if (!part) throw new Error(`Required road part not found: ${name}`)
+            this.connect(part)
         }
 
         this.connect(end)
