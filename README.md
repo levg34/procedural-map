@@ -47,7 +47,7 @@ To tune the ambulance lights interactively, install [lil-gui](https://www.npmjs.
 npm install --save-dev lil-gui
 ```
 
-Import `GUI` at the top of `src/main.ts`, then add the controls inside the ambulance model's `.then()` callback, after creating `headLight` and `headLight2`:
+Import `GUI` at the top of `src/main.ts`, then add the controls inside `initializeAmbulance()`, after creating `headLight` and `headLight2`:
 
 ```ts
 import { GUI } from 'lil-gui'

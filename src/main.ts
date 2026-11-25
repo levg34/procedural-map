@@ -63,8 +63,9 @@ let roadCenterPath: ReturnType<typeof createRoadCenterPath> | undefined
 let ambulanceProgress = 0
 let deliveryProgress = 0.5
 
-void loadModel('/model/cars/ambulance.glb')
-    .then((gltf) => {
+async function initializeAmbulance(): Promise<void> {
+    try {
+        const gltf = await loadModel('/model/cars/ambulance.glb')
         ambulance = gltf.scene
         ambulance.scale.set(0.2, 0.2, 0.2)
 
@@ -85,20 +86,24 @@ void loadModel('/model/cars/ambulance.glb')
         ambulance.add(headLight2)
 
         scene.add(ambulance)
-    })
-    .catch((error: unknown) => {
+    } catch (error: unknown) {
         console.error('Failed to load ambulance model:', error)
-    })
+    }
+}
 
-void loadModel('/model/cars/delivery.glb')
-    .then((gltf) => {
+async function initializeDeliveryCar(): Promise<void> {
+    try {
+        const gltf = await loadModel('/model/cars/delivery.glb')
         deliveryCar = gltf.scene
         deliveryCar.scale.set(0.2, 0.2, 0.2)
         scene.add(deliveryCar)
-    })
-    .catch((error: unknown) => {
+    } catch (error: unknown) {
         console.error('Failed to load delivery model:', error)
-    })
+    }
+}
+
+void initializeAmbulance()
+void initializeDeliveryCar()
 
 function loadRoadPreview(): void {
     if (models.road.length === 0) return
@@ -123,36 +128,38 @@ function loadRoadPreview(): void {
 }
 
 async function initializeRoad(): Promise<void> {
-    const roadModels = await getRoadParts()
-    models.road = await Promise.all(
-        roadModels.map(async (roadModel) => ({
-            ...roadModel,
-            model: await loadModel(roadModel.url)
-        }))
-    )
-    models.index = 0
+    try {
+        const roadModels = await getRoadParts()
+        models.road = await Promise.all(
+            roadModels.map(async (roadModel) => ({
+                ...roadModel,
+                model: await loadModel(roadModel.url)
+            }))
+        )
+        models.index = 0
 
-    const road = await getRoadShowcase()
-    roadCenterPath = createRoadCenterPath(road)
-    road.forEach((segment: RoadSegment) => {
-        const roadModel = models.road.find((model) => segment.name === model.name)
-        if (!roadModel) throw new Error(`Missing road model: ${segment.name}`)
+        const road = await getRoadShowcase()
+        roadCenterPath = createRoadCenterPath(road)
+        road.forEach((segment: RoadSegment) => {
+            const roadModel = models.road.find((model) => segment.name === model.name)
+            if (!roadModel) throw new Error(`Missing road model: ${segment.name}`)
 
-        const roadPart = new Object3D()
-        const roadPartModel = roadModel.model.scene.clone()
-        roadPartModel.position.z = -0.75
-        roadPart.add(roadPartModel)
-        if (segment.rotation !== undefined) {
-            roadPart.rotation.y = segment.rotation
-        }
-        roadPart.position.set(segment.position.x, segment.position.y, segment.position.z)
-        scene.add(roadPart)
-    })
+            const roadPart = new Object3D()
+            const roadPartModel = roadModel.model.scene.clone()
+            roadPartModel.position.z = -0.75
+            roadPart.add(roadPartModel)
+            if (segment.rotation !== undefined) {
+                roadPart.rotation.y = segment.rotation
+            }
+            roadPart.position.set(segment.position.x, segment.position.y, segment.position.z)
+            scene.add(roadPart)
+        })
+    } catch (error: unknown) {
+        console.error('Failed to initialize road:', error)
+    }
 }
 
-void initializeRoad().catch((error: unknown) => {
-    console.error('Failed to initialize road:', error)
-})
+void initializeRoad()
 
 let iter = 0
 let lastFrameTime = performance.now()

@@ -163,12 +163,14 @@ class Road {
     parts: RoadPart[]
     path: LinkedRoadPart[]
 
-    static build(length: number): Promise<Road> {
-        return getRoadParts().then((parts) => new Road(parts, { length }))
+    static async build(length: number): Promise<Road> {
+        const parts = await getRoadParts()
+        return new Road(parts, { length })
     }
 
-    static buildShowcase(): Promise<Road> {
-        return getRoadParts().then((parts) => new Road(parts, { showcase: true }))
+    static async buildShowcase(): Promise<Road> {
+        const parts = await getRoadParts()
+        return new Road(parts, { showcase: true })
     }
 
     constructor(parts: RoadPartMetadata[], options: { length: number } | { showcase: true }) {
