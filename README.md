@@ -11,9 +11,13 @@ npm ci
 npm run dev
 ```
 
-Open `http://localhost:5173`. Vite serves the browser app and proxies API/model requests to Express on port 3210. Press **Space** to preview road models.
+Open `http://localhost:5173` for a generated road or
+`http://localhost:5173/showcase` for the debugging showcase. Vite serves the
+browser app and proxies API/model requests to Express on port 3210. Press
+**Space** to preview road models.
 
-For a production build and server, run `npm start` and open `http://localhost:3210`.
+For a production build and server, run `npm start` and open
+`http://localhost:3210` or `http://localhost:3210/showcase`.
 
 ## Checks
 

@@ -13,6 +13,7 @@ import {
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { GLTFLoader, type GLTF } from 'three/addons/loaders/GLTFLoader.js'
 import {
+    getRoad,
     getRoadParts,
     getRoadShowcase,
     getTrafficVehicleModels,
@@ -21,6 +22,8 @@ import {
     type TrafficVehicleModel
 } from './data'
 import { createRoadCenterPath, getLanePosition } from './vehiclePath'
+
+const isShowcase = window.location.pathname === '/showcase'
 
 type LoadedRoadModel = RoadModel & {
     model: GLTF
@@ -211,7 +214,11 @@ function loadRoadPreview(): void {
 
 async function initializeRoad(): Promise<void> {
     try {
-        const [roadModels, availableTrafficModels] = await Promise.all([getRoadParts(), getTrafficVehicleModels()])
+        const [roadModels, availableTrafficModels, road] = await Promise.all([
+            getRoadParts(),
+            isShowcase ? getTrafficVehicleModels() : Promise.resolve([]),
+            isShowcase ? getRoadShowcase() : getRoad(10)
+        ])
         const [loadedRoadModels, loadedTrafficModels] = await Promise.all([
             Promise.all(
                 roadModels.map(async (roadModel) => ({
@@ -230,10 +237,11 @@ async function initializeRoad(): Promise<void> {
         trafficVehicleModels = loadedTrafficModels
         models.index = 0
 
-        const road = await getRoadShowcase()
         roadCenterPath = createRoadCenterPath(road)
-        trafficRoadPath = createRoadCenterPath(road, true)
-        spawnTrafficVehicle()
+        if (isShowcase) {
+            trafficRoadPath = createRoadCenterPath(road, true)
+            spawnTrafficVehicle()
+        }
         road.forEach((segment: RoadSegment) => {
             const roadModel = models.road.find((model) => segment.name === model.name)
             if (!roadModel) throw new Error(`Missing road model: ${segment.name}`)

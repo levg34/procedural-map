@@ -10,7 +10,7 @@ const port = 3210
 
 app.use(express.static(join(rootDirectory, 'dist')))
 
-app.get('/', (_req, res) => {
+app.get(['/', '/showcase'], (_req, res) => {
     res.sendFile(join(rootDirectory, 'dist', 'index.html'))
 })
 

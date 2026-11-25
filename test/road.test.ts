@@ -181,6 +181,9 @@ describe('Road', () => {
             const endpoints = 2
             assert.strictEqual(road.path.length, straightSections * roadLength + turns + endpoints)
         })
+        it('should create a vehicle route for the generated road', () => {
+            assert.ok(createRoadCenterPath(road.path).getLength() > 0)
+        })
         it('should contain road crossings', () => {
             assert.ok(road.path.map((e) => e.name).includes('road_crossing'))
         })
