@@ -87,12 +87,12 @@ async function initializeAmbulance(): Promise<void> {
         addHeadlights(ambulance, { halfWidth: 0.42, height: 0.65, frontZ: -1.55 })
 
         headLight = new PointLight(0x0e45ea, 2, 5)
-        headLight.position.set(-0.4, 1.7, 1.45)
+        headLight.position.set(-0.31, 1.73, 1.45)
         headLight.visible = true
         ambulance.add(headLight)
 
         headLight2 = new PointLight(0x0e45ea, 2, 5)
-        headLight2.position.set(0.4, 1.7, 1.45)
+        headLight2.position.set(0.31, 1.73, 1.45)
         headLight2.visible = false
         ambulance.add(headLight2)
 
