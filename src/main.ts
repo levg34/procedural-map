@@ -216,7 +216,7 @@ async function initializeRoad(): Promise<void> {
     try {
         const [roadModels, availableTrafficModels, road] = await Promise.all([
             getRoadParts(),
-            isShowcase ? getTrafficVehicleModels() : Promise.resolve([]),
+            getTrafficVehicleModels(),
             isShowcase ? getRoadShowcase() : getRoad(10)
         ])
         const [loadedRoadModels, loadedTrafficModels] = await Promise.all([
@@ -238,10 +238,8 @@ async function initializeRoad(): Promise<void> {
         models.index = 0
 
         roadCenterPath = createRoadCenterPath(road)
-        if (isShowcase) {
-            trafficRoadPath = createRoadCenterPath(road, true)
-            spawnTrafficVehicle()
-        }
+        trafficRoadPath = createRoadCenterPath(road, true)
+        spawnTrafficVehicle()
         road.forEach((segment: RoadSegment) => {
             const roadModel = models.road.find((model) => segment.name === model.name)
             if (!roadModel) throw new Error(`Missing road model: ${segment.name}`)
