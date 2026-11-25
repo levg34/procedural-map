@@ -60,6 +60,7 @@ let headLight: PointLight | undefined
 let headLight2: PointLight | undefined
 let deliveryCar: Group | undefined
 let roadCenterPath: ReturnType<typeof createRoadCenterPath> | undefined
+let deliveryRoadPath: ReturnType<typeof createRoadCenterPath> | undefined
 let ambulanceProgress = 0
 let deliveryProgress = 0.5
 
@@ -140,6 +141,7 @@ async function initializeRoad(): Promise<void> {
 
         const road = await getRoadShowcase()
         roadCenterPath = createRoadCenterPath(road)
+        deliveryRoadPath = createRoadCenterPath(road, true)
         road.forEach((segment: RoadSegment) => {
             const roadModel = models.road.find((model) => segment.name === model.name)
             if (!roadModel) throw new Error(`Missing road model: ${segment.name}`)
@@ -193,10 +195,10 @@ function animate(timestamp = performance.now()): void {
         iter++
     }
 
-    if (deliveryCar && roadCenterPath) {
-        const progressDelta = (2 * deltaTime) / roadCenterPath.getLength()
+    if (deliveryCar && deliveryRoadPath) {
+        const progressDelta = (2 * deltaTime) / deliveryRoadPath.getLength()
         deliveryProgress = (deliveryProgress + progressDelta) % 1
-        const deliveryPose = getLanePosition(roadCenterPath, deliveryProgress, 0.16, true)
+        const deliveryPose = getLanePosition(deliveryRoadPath, deliveryProgress, 0.16)
         deliveryCar.position.copy(deliveryPose.position)
         deliveryCar.position.y += 0.02
         deliveryCar.rotation.y = Math.atan2(-deliveryPose.tangent.x, -deliveryPose.tangent.z)

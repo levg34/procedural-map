@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { Vector3 } from 'three'
+import { CurvePath, Vector3 } from 'three'
 import { beforeAll, describe, it } from 'vitest'
 import { Road } from '../classes'
 import { roadTypes } from '../roadData'
@@ -78,6 +78,21 @@ describe('Road', () => {
             assert.ok(doubleEquals(laneDistance, 0.32))
             assert.ok(doubleEquals(forward.position.distanceTo(midpoint), 0.16))
             assert.ok(doubleEquals(reverse.position.distanceTo(midpoint), 0.16))
+        })
+
+        it('should route reverse traffic around the roundabout in the same direction', async () => {
+            const road = await Road.buildShowcase()
+            const forwardPath = createRoadCenterPath(road.path)
+            const reversePath = createRoadCenterPath(road.path, true)
+            const roundabout = road.path.find((part) => part.name === 'road_roundabout')
+            const roundaboutPath = reversePath.curves.find((curve) => curve instanceof CurvePath)
+
+            assert.ok(reversePath.getLength() > forwardPath.getLength() + 2)
+            assert.ok(roundabout)
+            assert.ok(roundaboutPath instanceof CurvePath)
+
+            const lanePosition = getLanePosition(roundaboutPath, 0.5, 0.16).position
+            assert.ok(doubleEquals(lanePosition.distanceTo(roundabout.position), 0.8))
         })
 
         it('should be continuous and avoid overlapping parts', async () => {
