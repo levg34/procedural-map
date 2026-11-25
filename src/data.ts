@@ -5,6 +5,8 @@ export type RoadModel = {
     name: string
 }
 
+export type TrafficVehicleModel = RoadModel
+
 export type RoadSegment = RoadPathSegment
 
 async function getJson<T>(url: string): Promise<T> {
@@ -19,3 +21,4 @@ async function getJson<T>(url: string): Promise<T> {
 export const getRoadParts = (): Promise<RoadModel[]> => getJson('/road_parts')
 export const getRoad = (length: number): Promise<RoadSegment[]> => getJson(`/road/${length}`)
 export const getRoadShowcase = (): Promise<RoadSegment[]> => getJson('/road/showcase')
+export const getTrafficVehicleModels = (): Promise<TrafficVehicleModel[]> => getJson('/traffic_vehicles')

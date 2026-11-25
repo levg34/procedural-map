@@ -101,8 +101,11 @@ variants reach about Y = 0.33 or Y = 0.58.
 | Racing / future  | `race`, `raceFuture`                                                                                                                               |
 | Wheels           | `wheelDark`, `wheelDefault`, `wheelRacing`, `wheelTractorBack`, `wheelTractorDarkBack`, `wheelTractorDarkFront`, `wheelTractorFront`, `wheelTruck` |
 
-The browser scene currently loads the ambulance; the other vehicle models are
-available as assets but are not automatically placed by the road generator.
+The showcase follows the ambulance and displays one traffic vehicle at a time.
+The traffic vehicle is randomly selected from the other car models when it
+reaches the end of the showcase road. Wheel assets are excluded, and all traffic
+vehicles have headlights. The ambulance has forward-facing headlights and
+flashing blue lights on the rear and cabin lightbars.
 
 ## Procedural-generation coverage
 
