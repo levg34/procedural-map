@@ -30,6 +30,57 @@ type LoadedTrafficVehicleModel = TrafficVehicleModel & {
     model: GLTF
 }
 
+type HeadlightPlacement = {
+    halfWidth: number
+    height: number
+    frontZ: number
+}
+
+type BeaconLightPlacement = {
+    x: number
+    y: number
+    z: number
+    color: number
+    initiallyVisible: boolean
+}
+
+const headlightPlacements: Record<string, HeadlightPlacement> = {
+    ambulance: { halfWidth: 0.42, height: 0.65, frontZ: -1.55 },
+    firetruck: { halfWidth: 0.35, height: 0.84, frontZ: -1.43 },
+    police: { halfWidth: 0.45, height: 0.55, frontZ: -1.32 },
+    tractorPolice: { halfWidth: 0.445, height: 0.62, frontZ: -0.91 }
+}
+
+const defaultHeadlightPlacement: HeadlightPlacement = {
+    halfWidth: 0.45,
+    height: 0.35,
+    frontZ: -1.35
+}
+
+const ambulanceBeaconPlacements: BeaconLightPlacement[] = [
+    { x: -0.31, y: 1.73, z: 1.45, color: 0x0e45ea, initiallyVisible: true },
+    { x: 0.31, y: 1.73, z: 1.45, color: 0x0e45ea, initiallyVisible: false },
+    { x: -0.31, y: 1.43, z: -0.75, color: 0x0e45ea, initiallyVisible: true },
+    { x: 0.31, y: 1.43, z: -0.75, color: 0x0e45ea, initiallyVisible: false }
+]
+
+const emergencyBeaconPlacements: Record<string, BeaconLightPlacement[]> = {
+    firetruck: [
+        { x: -0.28, y: 1.63, z: -1.21, color: 0x0e45ea, initiallyVisible: true },
+        { x: 0.28, y: 1.63, z: -1.21, color: 0x0e45ea, initiallyVisible: false },
+        { x: -0.28, y: 1.73, z: 1.5, color: 0x0e45ea, initiallyVisible: true },
+        { x: 0.28, y: 1.73, z: 1.5, color: 0x0e45ea, initiallyVisible: false }
+    ],
+    police: [
+        { x: -0.245, y: 1.33, z: -0.15, color: 0xff3030, initiallyVisible: true },
+        { x: 0.245, y: 1.33, z: -0.15, color: 0x0e45ea, initiallyVisible: false }
+    ],
+    tractorPolice: [
+        { x: -0.225, y: 1.59, z: 0.16, color: 0xff3030, initiallyVisible: true },
+        { x: 0.225, y: 1.59, z: 0.16, color: 0x0e45ea, initiallyVisible: false }
+    ]
+}
+
 const models: {
     road: LoadedRoadModel[]
     index?: number
@@ -67,13 +118,11 @@ const loadModel = (url: string): Promise<GLTF> => {
 }
 
 let ambulance: Group | undefined
-let headLight: PointLight | undefined
-let headLight2: PointLight | undefined
-let headLight3: PointLight | undefined
-let headLight4: PointLight | undefined
+let ambulanceBeaconLights: PointLight[] = []
 let trafficVehicle: Group | undefined
 let trafficVehicleModels: LoadedTrafficVehicleModel[] = []
 let currentTrafficVehicleModelName: string | undefined
+let trafficBeaconLights: PointLight[] = []
 let roadCenterPath: ReturnType<typeof createRoadCenterPath> | undefined
 let trafficRoadPath: ReturnType<typeof createRoadCenterPath> | undefined
 let ambulanceProgress = 0
@@ -84,42 +133,15 @@ async function initializeAmbulance(): Promise<void> {
         const gltf = await loadModel('/model/cars/ambulance.glb')
         ambulance = gltf.scene
         ambulance.scale.set(0.2, 0.2, 0.2)
-        addHeadlights(ambulance, { halfWidth: 0.42, height: 0.65, frontZ: -1.55 })
-
-        headLight = new PointLight(0x0e45ea, 2, 5)
-        headLight.position.set(-0.31, 1.73, 1.45)
-        headLight.visible = true
-        ambulance.add(headLight)
-
-        headLight2 = new PointLight(0x0e45ea, 2, 5)
-        headLight2.position.set(0.31, 1.73, 1.45)
-        headLight2.visible = false
-        ambulance.add(headLight2)
-
-        headLight3 = new PointLight(0x0e45ea, 2, 5)
-        headLight3.position.set(-0.31, 1.43, -0.75)
-        headLight3.visible = true
-        ambulance.add(headLight3)
-
-        headLight4 = new PointLight(0x0e45ea, 2, 5)
-        headLight4.position.set(0.31, 1.43, -0.75)
-        headLight4.visible = false
-        ambulance.add(headLight4)
-
+        addHeadlights(ambulance, headlightPlacements.ambulance)
+        ambulanceBeaconLights = addBeaconLights(ambulance, ambulanceBeaconPlacements)
         scene.add(ambulance)
     } catch (error: unknown) {
         console.error('Failed to load ambulance model:', error)
     }
 }
 
-function addHeadlights(
-    vehicle: Group,
-    placement: { halfWidth: number; height: number; frontZ: number } = {
-        halfWidth: 0.45,
-        height: 0.35,
-        frontZ: -1.35
-    }
-): void {
+function addHeadlights(vehicle: Group, placement: HeadlightPlacement = defaultHeadlightPlacement): void {
     for (const x of [-placement.halfWidth, placement.halfWidth]) {
         const target = new Object3D()
         target.position.set(x, placement.height - 0.1, -8)
@@ -131,6 +153,22 @@ function addHeadlights(
     }
 }
 
+function addBeaconLights(vehicle: Group, placements: BeaconLightPlacement[]): PointLight[] {
+    return placements.map((placement) => {
+        const light = new PointLight(placement.color, 2, 5)
+        light.position.set(placement.x, placement.y, placement.z)
+        light.visible = placement.initiallyVisible
+        vehicle.add(light)
+        return light
+    })
+}
+
+function toggleBeaconLights(lights: PointLight[]): void {
+    lights.forEach((light) => {
+        light.visible = !light.visible
+    })
+}
+
 function spawnTrafficVehicle(): void {
     const differentModels = trafficVehicleModels.filter((model) => model.name !== currentTrafficVehicleModelName)
     const candidates = differentModels.length > 0 ? differentModels : trafficVehicleModels
@@ -140,7 +178,8 @@ function spawnTrafficVehicle(): void {
     if (trafficVehicle) scene.remove(trafficVehicle)
     trafficVehicle = model.model.scene.clone()
     trafficVehicle.scale.set(0.2, 0.2, 0.2)
-    addHeadlights(trafficVehicle)
+    addHeadlights(trafficVehicle, headlightPlacements[model.name] ?? defaultHeadlightPlacement)
+    trafficBeaconLights = addBeaconLights(trafficVehicle, emergencyBeaconPlacements[model.name] ?? [])
     scene.add(trafficVehicle)
     currentTrafficVehicleModelName = model.name
     trafficVehicleProgress = 0
@@ -225,7 +264,7 @@ function animate(timestamp = performance.now()): void {
     const deltaTime = Math.min((timestamp - lastFrameTime) / 1000, 0.05)
     lastFrameTime = timestamp
 
-    if (ambulance && headLight && headLight2 && headLight3 && headLight4 && roadCenterPath) {
+    if (ambulance && roadCenterPath) {
         const progressDelta = (2 * deltaTime) / roadCenterPath.getLength()
         ambulanceProgress = (ambulanceProgress + progressDelta) % 1
         const ambulancePose = getLanePosition(roadCenterPath, ambulanceProgress, 0.16)
@@ -241,10 +280,8 @@ function animate(timestamp = performance.now()): void {
         previousAmbulancePosition = ambulance.position.clone()
 
         if (iter === 30) {
-            headLight.visible = !headLight.visible
-            headLight2.visible = !headLight2.visible
-            headLight3.visible = !headLight3.visible
-            headLight4.visible = !headLight4.visible
+            toggleBeaconLights(ambulanceBeaconLights)
+            toggleBeaconLights(trafficBeaconLights)
             iter = 0
         }
         iter++
