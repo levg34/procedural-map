@@ -2,7 +2,7 @@ import express from 'express'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { Road } from './classes'
-import { getRoadParts } from './utils'
+import { getRoadParts, getTrafficVehicleModels } from './utils'
 
 const app = express()
 const rootDirectory = dirname(fileURLToPath(import.meta.url))
@@ -10,8 +10,18 @@ const port = 3210
 
 app.use(express.static(join(rootDirectory, 'dist')))
 
-app.get('/', (_req, res) => {
+app.get(['/', '/showcase'], (_req, res) => {
     res.sendFile(join(rootDirectory, 'dist', 'index.html'))
+})
+
+app.get('/road/showcase', async (_req, res) => {
+    try {
+        const road = await Road.buildShowcase()
+        res.json(road.getPath())
+    } catch (error) {
+        console.error(error)
+        res.status(500).json({ error: error instanceof Error ? error.message : String(error) })
+    }
 })
 
 app.get('/road/:length', async (req, res) => {
@@ -33,6 +43,15 @@ app.get('/road/:length', async (req, res) => {
 app.get('/road_parts', async (_req, res) => {
     try {
         res.json(await getRoadParts())
+    } catch (error) {
+        console.error(error)
+        res.status(500).json({ error: error instanceof Error ? error.message : String(error) })
+    }
+})
+
+app.get('/traffic_vehicles', async (_req, res) => {
+    try {
+        res.json(await getTrafficVehicleModels())
     } catch (error) {
         console.error(error)
         res.status(500).json({ error: error instanceof Error ? error.message : String(error) })

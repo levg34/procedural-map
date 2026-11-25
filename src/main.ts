@@ -6,15 +6,82 @@ import {
     PointLight,
     Scene,
     SpotLight,
+    Vector3,
     WebGLRenderer,
     type Group
 } from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { GLTFLoader, type GLTF } from 'three/addons/loaders/GLTFLoader.js'
-import { getRoad, getRoadParts, type RoadModel, type RoadSegment } from './data'
+import {
+    getRoad,
+    getRoadParts,
+    getRoadShowcase,
+    getTrafficVehicleModels,
+    type RoadModel,
+    type RoadSegment,
+    type TrafficVehicleModel
+} from './data'
+import { createRoadCenterPath, getLanePosition } from './vehiclePath'
+
+const isShowcase = window.location.pathname === '/showcase'
 
 type LoadedRoadModel = RoadModel & {
     model: GLTF
+}
+
+type LoadedTrafficVehicleModel = TrafficVehicleModel & {
+    model: GLTF
+}
+
+type HeadlightPlacement = {
+    halfWidth: number
+    height: number
+    frontZ: number
+}
+
+type BeaconLightPlacement = {
+    x: number
+    y: number
+    z: number
+    color: number
+    initiallyVisible: boolean
+}
+
+const headlightPlacements: Record<string, HeadlightPlacement> = {
+    ambulance: { halfWidth: 0.42, height: 0.65, frontZ: -1.55 },
+    firetruck: { halfWidth: 0.35, height: 0.84, frontZ: -1.43 },
+    police: { halfWidth: 0.45, height: 0.55, frontZ: -1.32 },
+    tractorPolice: { halfWidth: 0.445, height: 0.62, frontZ: -0.91 }
+}
+
+const defaultHeadlightPlacement: HeadlightPlacement = {
+    halfWidth: 0.45,
+    height: 0.35,
+    frontZ: -1.35
+}
+
+const ambulanceBeaconPlacements: BeaconLightPlacement[] = [
+    { x: -0.31, y: 1.73, z: 1.45, color: 0x0e45ea, initiallyVisible: true },
+    { x: 0.31, y: 1.73, z: 1.45, color: 0x0e45ea, initiallyVisible: false },
+    { x: -0.31, y: 1.43, z: -0.75, color: 0x0e45ea, initiallyVisible: true },
+    { x: 0.31, y: 1.43, z: -0.75, color: 0x0e45ea, initiallyVisible: false }
+]
+
+const emergencyBeaconPlacements: Record<string, BeaconLightPlacement[]> = {
+    firetruck: [
+        { x: -0.28, y: 1.63, z: -1.21, color: 0x0e45ea, initiallyVisible: true },
+        { x: 0.28, y: 1.63, z: -1.21, color: 0x0e45ea, initiallyVisible: false },
+        { x: -0.28, y: 1.73, z: 1.5, color: 0x0e45ea, initiallyVisible: true },
+        { x: 0.28, y: 1.73, z: 1.5, color: 0x0e45ea, initiallyVisible: false }
+    ],
+    police: [
+        { x: -0.245, y: 1.33, z: -0.15, color: 0xff3030, initiallyVisible: true },
+        { x: 0.245, y: 1.33, z: -0.15, color: 0x0e45ea, initiallyVisible: false }
+    ],
+    tractorPolice: [
+        { x: -0.225, y: 1.59, z: 0.16, color: 0xff3030, initiallyVisible: true },
+        { x: 0.225, y: 1.59, z: 0.16, color: 0x0e45ea, initiallyVisible: false }
+    ]
 }
 
 const models: {
@@ -54,37 +121,74 @@ const loadModel = (url: string): Promise<GLTF> => {
 }
 
 let ambulance: Group | undefined
-let headLight: PointLight | undefined
-let headLight2: PointLight | undefined
+let ambulanceBeaconLights: PointLight[] = []
+let trafficVehicle: Group | undefined
+let trafficVehicleModels: LoadedTrafficVehicleModel[] = []
+let currentTrafficVehicleModelName: string | undefined
+let trafficBeaconLights: PointLight[] = []
+let roadCenterPath: ReturnType<typeof createRoadCenterPath> | undefined
+let trafficRoadPath: ReturnType<typeof createRoadCenterPath> | undefined
+let ambulanceProgress = 0
+let trafficVehicleProgress = 0
 
-void loadModel('/model/cars/ambulance.glb')
-    .then((gltf) => {
+async function initializeAmbulance(): Promise<void> {
+    try {
+        const gltf = await loadModel('/model/cars/ambulance.glb')
         ambulance = gltf.scene
         ambulance.scale.set(0.2, 0.2, 0.2)
-        ambulance.position.set(0, 0, 0.15)
-        ambulance.rotation.y = -Math.PI / 2
-
-        const frontLight = new SpotLight(0xffffff, 12, 15, Math.PI / 7, 0.4, 2)
-        frontLight.position.set(0, 0.6, -1.6)
-        frontLight.target.position.set(0, 0, -10)
-        ambulance.add(frontLight)
-        ambulance.add(frontLight.target)
-
-        headLight = new PointLight(0x0e45ea, 2, 5)
-        headLight.position.set(-0.4, 1.7, 1.45)
-        headLight.visible = true
-        ambulance.add(headLight)
-
-        headLight2 = new PointLight(0x0e45ea, 2, 5)
-        headLight2.position.set(0.4, 1.7, 1.45)
-        headLight2.visible = false
-        ambulance.add(headLight2)
-
+        addHeadlights(ambulance, headlightPlacements.ambulance)
+        ambulanceBeaconLights = addBeaconLights(ambulance, ambulanceBeaconPlacements)
         scene.add(ambulance)
-    })
-    .catch((error: unknown) => {
+    } catch (error: unknown) {
         console.error('Failed to load ambulance model:', error)
+    }
+}
+
+function addHeadlights(vehicle: Group, placement: HeadlightPlacement = defaultHeadlightPlacement): void {
+    for (const x of [-placement.halfWidth, placement.halfWidth]) {
+        const target = new Object3D()
+        target.position.set(x, placement.height - 0.1, -8)
+
+        const light = new SpotLight(0xfff2d0, 8, 2.5, Math.PI / 7, 0.4, 2)
+        light.position.set(x, placement.height, placement.frontZ)
+        light.target = target
+        vehicle.add(light, target)
+    }
+}
+
+function addBeaconLights(vehicle: Group, placements: BeaconLightPlacement[]): PointLight[] {
+    return placements.map((placement) => {
+        const light = new PointLight(placement.color, 2, 5)
+        light.position.set(placement.x, placement.y, placement.z)
+        light.visible = placement.initiallyVisible
+        vehicle.add(light)
+        return light
     })
+}
+
+function toggleBeaconLights(lights: PointLight[]): void {
+    lights.forEach((light) => {
+        light.visible = !light.visible
+    })
+}
+
+function spawnTrafficVehicle(): void {
+    const differentModels = trafficVehicleModels.filter((model) => model.name !== currentTrafficVehicleModelName)
+    const candidates = differentModels.length > 0 ? differentModels : trafficVehicleModels
+    const model = candidates[Math.floor(Math.random() * candidates.length)]
+    if (!model) throw new Error('No traffic vehicle models available')
+
+    if (trafficVehicle) scene.remove(trafficVehicle)
+    trafficVehicle = model.model.scene.clone()
+    trafficVehicle.scale.set(0.2, 0.2, 0.2)
+    addHeadlights(trafficVehicle, headlightPlacements[model.name] ?? defaultHeadlightPlacement)
+    trafficBeaconLights = addBeaconLights(trafficVehicle, emergencyBeaconPlacements[model.name] ?? [])
+    scene.add(trafficVehicle)
+    currentTrafficVehicleModelName = model.name
+    trafficVehicleProgress = 0
+}
+
+void initializeAmbulance()
 
 function loadRoadPreview(): void {
     if (models.road.length === 0) return
@@ -109,59 +213,98 @@ function loadRoadPreview(): void {
 }
 
 async function initializeRoad(): Promise<void> {
-    const roadModels = await getRoadParts()
-    models.road = await Promise.all(
-        roadModels.map(async (roadModel) => ({
-            ...roadModel,
-            model: await loadModel(roadModel.url)
-        }))
-    )
-    models.index = 0
+    try {
+        const [roadModels, availableTrafficModels, road] = await Promise.all([
+            getRoadParts(),
+            getTrafficVehicleModels(),
+            isShowcase ? getRoadShowcase() : getRoad(10)
+        ])
+        const [loadedRoadModels, loadedTrafficModels] = await Promise.all([
+            Promise.all(
+                roadModels.map(async (roadModel) => ({
+                    ...roadModel,
+                    model: await loadModel(roadModel.url)
+                }))
+            ),
+            Promise.all(
+                availableTrafficModels.map(async (vehicleModel) => ({
+                    ...vehicleModel,
+                    model: await loadModel(vehicleModel.url)
+                }))
+            )
+        ])
+        models.road = loadedRoadModels
+        trafficVehicleModels = loadedTrafficModels
+        models.index = 0
 
-    const road = await getRoad(10)
-    road.forEach((segment: RoadSegment) => {
-        const roadModel = models.road.find((model) => segment.name === model.name)
-        if (!roadModel) throw new Error(`Missing road model: ${segment.name}`)
+        roadCenterPath = createRoadCenterPath(road)
+        trafficRoadPath = createRoadCenterPath(road, true)
+        spawnTrafficVehicle()
+        road.forEach((segment: RoadSegment) => {
+            const roadModel = models.road.find((model) => segment.name === model.name)
+            if (!roadModel) throw new Error(`Missing road model: ${segment.name}`)
 
-        const roadPart = new Object3D()
-        const roadPartModel = roadModel.model.scene.clone()
-        roadPartModel.position.z = -0.75
-        roadPart.add(roadPartModel)
-        if (segment.rotation !== undefined) {
-            roadPart.rotation.y = segment.rotation
-        }
-        roadPart.position.set(segment.position.x, segment.position.y, segment.position.z)
-        scene.add(roadPart)
-    })
+            const roadPart = new Object3D()
+            const roadPartModel = roadModel.model.scene.clone()
+            roadPartModel.position.z = -0.75
+            roadPart.add(roadPartModel)
+            if (segment.rotation !== undefined) {
+                roadPart.rotation.y = segment.rotation
+            }
+            roadPart.position.set(segment.position.x, segment.position.y, segment.position.z)
+            scene.add(roadPart)
+        })
+    } catch (error: unknown) {
+        console.error('Failed to initialize road:', error)
+    }
 }
 
-void initializeRoad().catch((error: unknown) => {
-    console.error('Failed to initialize road:', error)
-})
+void initializeRoad()
 
 let iter = 0
-function animate(): void {
+let lastFrameTime = performance.now()
+let previousAmbulancePosition: Vector3 | undefined
+function animate(timestamp = performance.now()): void {
     requestAnimationFrame(animate)
 
-    if (ambulance && headLight && headLight2) {
-        if (ambulance.position.x < 9) {
-            ambulance.position.x += 0.01
-            camera.position.x += 0.01
-            controls.target.x += 0.01
-        } else {
-            ambulance.position.x = 0
-            camera.position.x -= 9 + 0.01
-            controls.target.x -= 9 + 0.01
+    const deltaTime = Math.min((timestamp - lastFrameTime) / 1000, 0.05)
+    lastFrameTime = timestamp
+
+    if (ambulance && roadCenterPath) {
+        const progressDelta = (2 * deltaTime) / roadCenterPath.getLength()
+        ambulanceProgress = (ambulanceProgress + progressDelta) % 1
+        const ambulancePose = getLanePosition(roadCenterPath, ambulanceProgress, 0.16)
+        ambulance.position.copy(ambulancePose.position)
+        ambulance.rotation.y = Math.atan2(-ambulancePose.tangent.x, -ambulancePose.tangent.z)
+        ambulance.position.y += 0.02
+
+        if (previousAmbulancePosition) {
+            const movement = ambulance.position.clone().sub(previousAmbulancePosition)
+            camera.position.add(movement)
+            controls.target.add(movement)
         }
-        controls.update()
+        previousAmbulancePosition = ambulance.position.clone()
+
         if (iter === 30) {
-            headLight.visible = !headLight.visible
-            headLight2.visible = !headLight2.visible
+            toggleBeaconLights(ambulanceBeaconLights)
+            toggleBeaconLights(trafficBeaconLights)
             iter = 0
         }
         iter++
     }
 
+    if (trafficVehicle && trafficRoadPath) {
+        const progressDelta = (2 * deltaTime) / trafficRoadPath.getLength()
+        trafficVehicleProgress += progressDelta
+        if (trafficVehicleProgress >= 1) spawnTrafficVehicle()
+
+        const trafficPose = getLanePosition(trafficRoadPath, trafficVehicleProgress, 0.16)
+        trafficVehicle.position.copy(trafficPose.position)
+        trafficVehicle.position.y += 0.02
+        trafficVehicle.rotation.y = Math.atan2(-trafficPose.tangent.x, -trafficPose.tangent.z)
+    }
+
+    controls.update()
     renderer.render(scene, camera)
 }
 

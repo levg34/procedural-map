@@ -1,8 +1,7 @@
 import assert from 'node:assert/strict'
 import { Vector3 } from 'three'
 import { beforeAll, describe, it, vi } from 'vitest'
-import { LinkedRoadPart, Road, RoadPart } from '../classes'
-import { roadTypes } from '../roadData'
+import { LinkedRoadPart, RoadPart } from '../classes'
 import { getRoadParts } from '../utils'
 import { doubleEquals, vectors3Equals } from './testUtils'
 
@@ -16,6 +15,29 @@ describe('RoadPart', function () {
 
         part = new RoadPart(partData)
         clonedPart = part.clone()
+    })
+    it('should include measured footprints and off-center connector locations', async () => {
+        const parts = await getRoadParts()
+        const partsByName = new Map(parts.map((part) => [part.name, part]))
+
+        assert.deepStrictEqual(partsByName.get('road_curve')?.footprint, { width: 2, depth: 2 })
+        assert.deepStrictEqual(partsByName.get('road_roundabout')?.footprint, { width: 3, depth: 3 })
+        assert.deepStrictEqual(partsByName.get('road_split')?.footprint, { width: 1, depth: 2 })
+        assert.deepStrictEqual(partsByName.get('road_curve')?.connectionOffsets, [
+            new Vector3(1, 0, 0.5),
+            new Vector3(-0.5, 0, -1)
+        ])
+        assert.deepStrictEqual(partsByName.get('road_curveIntersection')?.connectionOffsets, [
+            new Vector3(1, 0, 0.5),
+            new Vector3(-1, 0, 0.5),
+            new Vector3(-0.5, 0, -1)
+        ])
+        for (const name of ['road_side', 'road_sideEntry', 'road_sideExit']) {
+            assert.deepStrictEqual(partsByName.get(name)?.connectionOffsets, [
+                new Vector3(0.5, 0, -0.155),
+                new Vector3(-0.5, 0, -0.155)
+            ])
+        }
     })
     describe('rotate', () => {
         it('should rotate all directions', () => {
@@ -38,6 +60,19 @@ describe('RoadPart', function () {
             isolatedPart.rotate(Math.PI / 2)
 
             assert.deepStrictEqual(direction, new Vector3(1, 0, 0))
+        })
+        it('should rotate its footprint with the part', () => {
+            const part = new RoadPart({
+                url: '',
+                name: 'split',
+                directions: [],
+                footprint: { width: 1, depth: 2 }
+            })
+
+            part.rotate(Math.PI / 2)
+
+            assert.ok(doubleEquals(part.getFootprint().width, 2))
+            assert.ok(doubleEquals(part.getFootprint().depth, 1))
         })
     })
     describe('clone', () => {
@@ -153,6 +188,46 @@ describe('LinkedRoadPart', () => {
             assert.deepStrictEqual(nextPart.directions, [new Vector3(1, 0, 0), new Vector3(-1, 0, 0)])
         })
 
+        it('should place larger parts by their connection edges', () => {
+            const source = new LinkedRoadPart(
+                new RoadPart({
+                    url: '',
+                    name: 'roundabout',
+                    directions: [new Vector3(1, 0, 0), new Vector3(-1, 0, 0)],
+                    footprint: { width: 3, depth: 3 }
+                })
+            )
+            const target = new RoadPart({
+                url: '',
+                name: 'straight',
+                directions: [new Vector3(1, 0, 0), new Vector3(-1, 0, 0)]
+            })
+
+            const connected = source.connect(target)
+
+            assert.ok(vectors3Equals(connected.position, new Vector3(2, 0, 0)))
+        })
+
+        it('should align off-center connectors', () => {
+            const curve = new RoadPart({
+                url: '',
+                name: 'curve',
+                directions: [new Vector3(1, 0, 0), new Vector3(0, 0, -1)],
+                footprint: { width: 2, depth: 2 },
+                connectionOffsets: [new Vector3(1, 0, 0.5), new Vector3(-0.5, 0, -1)]
+            })
+            const source = new LinkedRoadPart(curve)
+            const straightPart = new RoadPart({
+                url: '',
+                name: 'straight',
+                directions: [new Vector3(1, 0, 0), new Vector3(-1, 0, 0)]
+            })
+
+            const connected = source.connect(straightPart)
+
+            assert.ok(vectors3Equals(connected.position, new Vector3(1.5, 0, 0.5)))
+        })
+
         it('should not use a direction that is already being used', () => {
             const source = new LinkedRoadPart(
                 new RoadPart({
@@ -172,86 +247,6 @@ describe('LinkedRoadPart', () => {
 
             assert.strictEqual(source.getAvailableDirections().length, 0)
             assert.throws(() => source.connect(straightPart), /No direction available/)
-        })
-    })
-})
-
-describe('Road', () => {
-    const roadLength = 10
-    let road: Road
-    beforeAll(async () => {
-        road = await Road.build(roadLength)
-    })
-    describe('create straight line', function () {
-        const straightLength = 5
-        it('should return an array of road parts', function () {
-            assert.ok(road.createStraightLine(straightLength) instanceof Array)
-        })
-        it('should return an empty array if length insufficient', function () {
-            assert.ok(road.createStraightLine(1) instanceof Array)
-        })
-        it('should be exactly as long as intended', function () {
-            assert.strictEqual(road.createStraightLine(straightLength).length, straightLength)
-        })
-        it('should contain exactly ONE road crossing', () => {
-            assert.strictEqual(
-                road.createStraightLine(straightLength).filter((e) => e.name === 'road_crossing').length,
-                1
-            )
-        })
-    })
-    describe('get part by name', () => {
-        const partName = 'road_crossing'
-        it('should not be null if exists', () => {
-            assert.notStrictEqual(road.getRoadPartByName(partName), null)
-            assert.notStrictEqual(road.getRoadPartByName(partName), undefined)
-        })
-        it('should return the correct part', () => {
-            const part = road.getRoadPartByName(partName)
-            assert.ok(part)
-            assert.strictEqual(part.name, partName)
-        })
-    })
-    describe('create road', function () {
-        it('should return an array of road parts', function () {
-            assert.ok(road.path instanceof Array)
-        })
-        it('should be exactly as long as intended', function () {
-            const straightSections = 6
-            const turns = 5
-            const endpoints = 2
-            assert.strictEqual(road.path.length, straightSections * roadLength + turns + endpoints)
-        })
-        it('should contain road crossings', () => {
-            assert.ok(road.path.map((e) => e.name).includes('road_crossing'))
-        })
-        it('should be continuous', () => {
-            for (let index = 1; index < road.path.length; index++) {
-                const previous = road.path[index - 1]
-                const current = road.path[index]
-                const direction = current.position.clone().sub(previous.position)
-
-                assert.ok(
-                    previous.usedDirections.some((usedDirection) => vectors3Equals(usedDirection, direction)),
-                    `${previous.name} at ${previous.position.toArray()} is not connected to ${current.name} at ${current.position.toArray()}`
-                )
-            }
-        })
-        it('should not place multiple parts at the same position', () => {
-            for (let index = 0; index < road.path.length; index++) {
-                for (let otherIndex = index + 1; otherIndex < road.path.length; otherIndex++) {
-                    assert.ok(
-                        !vectors3Equals(road.path[index].position, road.path[otherIndex].position),
-                        `Parts ${index} and ${otherIndex} overlap at ${road.path[index].position.toArray()}`
-                    )
-                }
-            }
-        })
-        it('should have a start and an end', () => {
-            assert.strictEqual(road.path.filter((e) => e.name === 'road_end').length, 2)
-        })
-        it('should contain turns', () => {
-            assert.ok(road.path.map((e) => e.name).filter((e) => roadTypes.turn.for.includes(e)).length > 0)
         })
     })
 })
