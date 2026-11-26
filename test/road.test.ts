@@ -185,6 +185,18 @@ describe('Road', () => {
             assert.ok(createRoadCenterPath(road.path).getLength() > 0)
             assert.ok(createRoadCenterPath(road.path, true).getLength() > 0)
         })
+        it('should keep a continuous tangent through both road ends', () => {
+            for (const reverse of [false, true]) {
+                const path = createRoadCenterPath(road.path, reverse)
+                const start = getLanePosition(path, 0, 0.16)
+                const afterStart = getLanePosition(path, 0.01, 0.16)
+                const beforeEnd = getLanePosition(path, 0.99, 0.16)
+                const end = getLanePosition(path, 1, 0.16)
+
+                assert.ok(start.tangent.dot(afterStart.tangent) > 0.999999)
+                assert.ok(beforeEnd.tangent.dot(end.tangent) > 0.999999)
+            }
+        })
         it('should turn between opposite lanes at the road end', () => {
             const forwardPath = createRoadCenterPath(road.path)
             const reversePath = createRoadCenterPath(road.path, true)

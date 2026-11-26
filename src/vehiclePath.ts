@@ -125,10 +125,7 @@ export function createRoadCenterPath(segments: RoadPathSegment[], reverse = fals
         new LineCurve3(
             firstConnector
                 .clone()
-                .addScaledVector(
-                    new Vector3(firstDirection.x, firstDirection.y, firstDirection.z),
-                    reverse ? 0.5 : -0.5
-                ),
+                .addScaledVector(new Vector3(firstDirection.x, firstDirection.y, firstDirection.z), -0.5),
             firstConnector
         )
     )
@@ -167,9 +164,7 @@ export function createRoadCenterPath(segments: RoadPathSegment[], reverse = fals
     curve.add(
         new LineCurve3(
             lastConnector,
-            lastConnector
-                .clone()
-                .addScaledVector(new Vector3(lastDirection.x, lastDirection.y, lastDirection.z), reverse ? -0.5 : 0.5)
+            lastConnector.clone().addScaledVector(new Vector3(lastDirection.x, lastDirection.y, lastDirection.z), -0.5)
         )
     )
 
