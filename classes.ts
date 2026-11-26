@@ -102,8 +102,20 @@ class LinkedRoadPart extends RoadPart {
         this.usedDirections = usedDirections instanceof Array ? usedDirections : []
     }
 
+    override clone(): LinkedRoadPart {
+        return new LinkedRoadPart(
+            super.clone(),
+            this.position.clone(),
+            this.usedDirections.map((direction) => direction.clone())
+        )
+    }
+
     translate(newPosition: Vector3): void {
         this.position.add(newPosition)
+    }
+
+    getConnectionPoint(direction: Vector3): Vector3 {
+        return this.position.clone().add(this.getConnectionOffset(direction))
     }
 
     private selectDirection(direction?: Vector3): Vector3 {
@@ -141,6 +153,15 @@ class LinkedRoadPart extends RoadPart {
         return nextDirection
     }
 
+    private useDirection(direction: Vector3): Vector3 {
+        const chosen = this.getAvailableDirections().find(
+            (candidate) => candidate.distanceToSquared(direction) < 0.0000001
+        )
+        if (!chosen) throw new Error(`Direction ${direction.toArray()} is not available on ${this.name}`)
+        this.usedDirections.push(chosen)
+        return chosen
+    }
+
     connect(next: RoadPart): LinkedRoadPart {
         if (this.getAvailableDirections().length < 1) {
             throw new Error('No direction available')
@@ -149,6 +170,18 @@ class LinkedRoadPart extends RoadPart {
         const direction = this.selectDirection()
         const nextDirection = nextRoadPart.selectDirection(direction)
         const offset = this.getConnectionOffset(direction).clone().sub(nextRoadPart.getConnectionOffset(nextDirection))
+        nextRoadPart.translate(this.position)
+        nextRoadPart.translate(offset)
+        return nextRoadPart
+    }
+
+    // Like connect(), but forces this part to leave through a specific port.
+    // Needed when growing a network from an existing open connector.
+    connectVia(next: RoadPart, direction: Vector3): LinkedRoadPart {
+        const nextRoadPart = new LinkedRoadPart(next)
+        const outgoing = this.useDirection(direction)
+        const nextDirection = nextRoadPart.selectDirection(outgoing)
+        const offset = this.getConnectionOffset(outgoing).clone().sub(nextRoadPart.getConnectionOffset(nextDirection))
         nextRoadPart.translate(this.position)
         nextRoadPart.translate(offset)
         return nextRoadPart

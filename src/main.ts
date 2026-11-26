@@ -13,11 +13,12 @@ import {
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { GLTFLoader, type GLTF } from 'three/addons/loaders/GLTFLoader.js'
 import {
-    getRoad,
+    getRoadGrid,
     getRoadParts,
     getRoadShowcase,
     getTrafficVehicleModels,
     type RoadModel,
+    type RoadNetwork,
     type RoadSegment,
     type TrafficVehicleModel
 } from './data'
@@ -137,8 +138,8 @@ let ambulanceBeaconLights: PointLight[] = []
 let trafficVehicleModels: LoadedTrafficVehicleModel[] = []
 const trafficVehicles: TrafficVehicle[] = []
 let lastTrafficVehicleModelName: string | undefined
-let roadCenterPath: ReturnType<typeof createRoadCenterPath> | undefined
-let reverseRoadPath: ReturnType<typeof createRoadCenterPath> | undefined
+let forwardPaths: ReturnType<typeof createRoadCenterPath>[] = []
+let reversePaths: ReturnType<typeof createRoadCenterPath>[] = []
 let ambulanceProgress = 0
 let ambulanceReturning = false
 let ambulanceTurnProgress: number | undefined
@@ -216,7 +217,7 @@ function loadRoadPreview(): void {
     const index = models.index
     if (index === undefined) return
 
-    if (index > 0 && models.current) {
+    if (models.current) {
         scene.remove(models.current)
     }
 
@@ -234,10 +235,10 @@ function loadRoadPreview(): void {
 
 async function initializeRoad(): Promise<void> {
     try {
-        const [roadModels, availableTrafficModels, road] = await Promise.all([
+        const [roadModels, availableTrafficModels, network] = await Promise.all([
             getRoadParts(),
             getTrafficVehicleModels(),
-            isShowcase ? getRoadShowcase() : getRoad(10)
+            isShowcase ? getRoadShowcase() : getRoadGrid(10)
         ])
         const [loadedRoadModels, loadedTrafficModels] = await Promise.all([
             Promise.all(
@@ -257,17 +258,21 @@ async function initializeRoad(): Promise<void> {
         trafficVehicleModels = loadedTrafficModels
         models.index = 0
 
-        scene.add(createGrassGround(road))
-        roadCenterPath = createRoadCenterPath(road)
-        reverseRoadPath = createRoadCenterPath(road, true)
+        scene.add(createGrassGround(network.tiles))
+        forwardPaths = network.routes.map((route) => createRoadCenterPath(route))
+        reversePaths = network.routes.map((route) => createRoadCenterPath(route, true))
         // Keep progress 0 on both paths clear for the ambulance.
         for (let index = 0; index < reverseTrafficVehicleCount; index++) {
-            trafficVehicles.push(createTrafficVehicle(reverseRoadPath, (index + 1) / (reverseTrafficVehicleCount + 1)))
+            const path = reversePaths[index % reversePaths.length]
+            if (!path) continue
+            trafficVehicles.push(createTrafficVehicle(path, (index + 1) / (reverseTrafficVehicleCount + 1)))
         }
         for (let index = 0; index < forwardTrafficVehicleCount; index++) {
-            trafficVehicles.push(createTrafficVehicle(roadCenterPath, (index + 1) / (forwardTrafficVehicleCount + 1)))
+            const path = forwardPaths[index % forwardPaths.length]
+            if (!path) continue
+            trafficVehicles.push(createTrafficVehicle(path, (index + 1) / (forwardTrafficVehicleCount + 1)))
         }
-        road.forEach((segment: RoadSegment) => {
+        network.tiles.forEach((segment: RoadSegment) => {
             const roadModel = models.road.find((model) => segment.name === model.name)
             if (!roadModel) throw new Error(`Missing road model: ${segment.name}`)
 
@@ -297,8 +302,10 @@ function animate(timestamp = performance.now()): void {
     const deltaTime = Math.min((timestamp - lastFrameTime) / 1000, 0.05)
     lastFrameTime = timestamp
 
-    if (ambulance && roadCenterPath && reverseRoadPath) {
-        const path = !isShowcase && ambulanceReturning ? reverseRoadPath : roadCenterPath
+    const forwardPath = forwardPaths[0]
+    const reversePath = reversePaths[0]
+    if (ambulance && forwardPath && reversePath) {
+        const path = !isShowcase && ambulanceReturning ? reversePath : forwardPath
         let ambulancePose: { position: Vector3; tangent: Vector3 }
 
         if (ambulanceTurnProgress === undefined) {

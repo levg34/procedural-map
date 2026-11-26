@@ -13,8 +13,9 @@ npm run dev
 
 Open `http://localhost:5173` for a generated road or
 `http://localhost:5173/showcase` for the debugging showcase. Vite serves the
-browser app and proxies API/model requests to Express on port 3210. Press
-**Space** to preview road models.
+browser app and proxies API/model requests to Express on port 3210. The main
+page requests an 8×8-or-larger grid from `GET /road/:size`; press **Space** to
+preview road models.
 
 For a production build and server, run `npm start` and open
 `http://localhost:3210` or `http://localhost:3210/showcase`.
@@ -30,9 +31,28 @@ npm run build        # Type-check and create the production client bundle
 ## Code map
 
 - `index.ts` — Express API and production static-file server.
-- `classes.ts`, `roadData.ts`, `utils.ts` — road generation, connection directions, and model metadata.
-- `src/main.ts`, `src/data.ts` — Three.js scene and browser API calls.
-- `test/` — road-generation tests.
+- `roadGrid.ts` — grid network generator: closes every connector, uses every connectable road type, and derives vehicle routes.
+- `classes.ts`, `roadData.ts`, `utils.ts` — connection primitives, directions, and model metadata.
+- `src/main.ts`, `src/data.ts`, `src/vehiclePath.ts` — Three.js scene, API types, and vehicle routes.
+- `test/` — road-generation and network tests.
+
+## Road generation
+
+`GET /road/:size` (or `Road.build`/`buildRoadNetwork` in TypeScript) takes a
+single integer grid size and builds a connected road network inside that area.
+Generation has three rules:
+
+1. Every connector of every placed tile is paired with a facing connector on a
+   neighbor — no dangling ends.
+2. Every connectable road type in `roadData.ts` is used at least once; after
+   that, placements prefer unused types and layouts that close multiple ports.
+3. A placement is accepted only if every remaining open port can still be
+   extended, which prevents connectors from becoming trapped.
+
+The response is a graph: `tiles` (positions/rotations/ports), `connections`
+(paired ports and their world points), and `routes` (linear tile sequences
+derived from the graph for the vehicle splines). The old linear `Road.build`
+path and `/road/showcase` are kept for debugging.
 
 ## Browser debugging helpers
 
