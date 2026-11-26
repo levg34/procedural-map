@@ -45,3 +45,22 @@ export const trafficVehicleWeights: Record<string, number> = {
 export function getTrafficVehicleWeight(name: string, weights: Record<string, number> = trafficVehicleWeights): number {
     return weights[name] ?? defaultTrafficVehicleWeight
 }
+
+// World units per second. Race cars are the fastest thing in traffic, emergency
+// vehicles are quick, tractors are slow, and everything else uses the default.
+export const defaultTrafficVehicleSpeed = 1.5
+
+export const trafficVehicleSpeeds: Record<string, number> = {
+    ambulance: 1.9,
+    firetruck: 1.8,
+    police: 1.9,
+    race: 2.6,
+    raceFuture: 2.8,
+    tractor: 0.8,
+    tractorPolice: 0.8,
+    tractorShovel: 0.75
+}
+
+export function getTrafficVehicleSpeed(name: string, speeds: Record<string, number> = trafficVehicleSpeeds): number {
+    return speeds[name] ?? defaultTrafficVehicleSpeed
+}

@@ -1,7 +1,9 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'vitest'
 import {
+    defaultTrafficVehicleSpeed,
     defaultTrafficVehicleWeight,
+    getTrafficVehicleSpeed,
     getTrafficVehicleWeight,
     isTrafficVehicleExcluded,
     isVehiclePart,
@@ -56,5 +58,31 @@ describe('traffic vehicle weights', () => {
     it('should accept a custom weight table', () => {
         assert.strictEqual(getTrafficVehicleWeight('ambulance', { ambulance: 3 }), 3)
         assert.strictEqual(getTrafficVehicleWeight('sedan', { ambulance: 3 }), defaultTrafficVehicleWeight)
+    })
+})
+
+describe('traffic vehicle speeds', () => {
+    it('should give unlisted models the default speed', () => {
+        assert.strictEqual(getTrafficVehicleSpeed('sedan'), defaultTrafficVehicleSpeed)
+        assert.strictEqual(getTrafficVehicleSpeed('unknownModel'), defaultTrafficVehicleSpeed)
+    })
+
+    it('should make tractors slow and emergency and race vehicles quick', () => {
+        assert.ok(getTrafficVehicleSpeed('tractor') < defaultTrafficVehicleSpeed)
+        assert.ok(getTrafficVehicleSpeed('tractorShovel') < getTrafficVehicleSpeed('tractor'))
+        assert.ok(getTrafficVehicleSpeed('race') > defaultTrafficVehicleSpeed)
+        assert.ok(getTrafficVehicleSpeed('police') > defaultTrafficVehicleSpeed)
+        assert.ok(getTrafficVehicleSpeed('ambulance') > defaultTrafficVehicleSpeed)
+    })
+
+    it('should make race cars clearly faster than emergency vehicles', () => {
+        assert.ok(getTrafficVehicleSpeed('race') > getTrafficVehicleSpeed('police'))
+        assert.ok(getTrafficVehicleSpeed('race') > getTrafficVehicleSpeed('ambulance'))
+        assert.ok(getTrafficVehicleSpeed('raceFuture') > getTrafficVehicleSpeed('race'))
+    })
+
+    it('should accept a custom speed table', () => {
+        assert.strictEqual(getTrafficVehicleSpeed('tractor', { tractor: 2 }), 2)
+        assert.strictEqual(getTrafficVehicleSpeed('sedan', { tractor: 2 }), defaultTrafficVehicleSpeed)
     })
 })

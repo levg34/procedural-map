@@ -288,8 +288,83 @@ describe('traffic simulation', () => {
         assert.ok(closest >= minimumGap - 0.05, `closest ambulance-to-traffic gap was ${closest}`)
     })
 
+    it('moves each vehicle at its own speed', () => {
+        const speeds = [1, 3]
+        let nextSpeed = 0
+        const created: Group[] = []
+        const { simulation } = createSetup({
+            reverseTrafficVehicleCount: 0,
+            forwardTrafficVehicleCount: 2,
+            speed: () => speeds[nextSpeed++] ?? 1,
+            createVehicle: () => {
+                const object = new Group()
+                created.push(object)
+                return { object, beaconLights: [] }
+            }
+        })
+        simulation.start(straightPath(), straightPath(10, 0), [vehicleModel('car')])
+
+        simulation.update(1)
+
+        assert.ok(doubleEquals(created[0]?.position.z ?? -1, 10 / 3 + 1))
+        assert.ok(doubleEquals(created[1]?.position.z ?? -1, 20 / 3 + 3))
+    })
+
+    it('keeps a fast follower behind a slow leader', () => {
+        const minimumGap = 1
+        const speeds = [3, 0.5, 3]
+        let nextSpeed = 0
+        const created: Group[] = []
+        const { simulation } = createSetup({
+            reverseTrafficVehicleCount: 0,
+            forwardTrafficVehicleCount: 3,
+            minimumGap,
+            speed: () => speeds[nextSpeed++] ?? 1,
+            createVehicle: () => {
+                const object = new Group()
+                created.push(object)
+                return { object, beaconLights: [] }
+            }
+        })
+        simulation.start(straightPath(), straightPath(10, 0), [vehicleModel('car')])
+
+        let closest = Infinity
+        for (let step = 0; step < 60 * 60; step++) {
+            simulation.update(1 / 60)
+            const z = created.map((object) => object.position.z).sort((a, b) => a - b)
+            for (let index = 1; index < z.length; index++) {
+                closest = Math.min(closest, z[index] - z[index - 1])
+            }
+        }
+
+        assert.ok(closest >= minimumGap - 0.05, `closest traffic-to-traffic gap was ${closest}`)
+    })
+
+    it('lets traffic just ahead of the ambulance yield', () => {
+        const created: Group[] = []
+        const { simulation } = createSetup({
+            reverseTrafficVehicleCount: 0,
+            forwardTrafficVehicleCount: 1,
+            speed: () => 0.5,
+            ambulanceSpeed: 2,
+            createVehicle: () => {
+                const object = new Group()
+                created.push(object)
+                return { object, beaconLights: [] }
+            }
+        })
+        const ambulance = new Group()
+        simulation.setAmbulance(ambulance, [])
+        simulation.start(straightPath(), straightPath(10, 0), [vehicleModel('tractor')])
+
+        simulation.update(3)
+
+        // Without yielding the ambulance would be capped at the tractor's pace.
+        assert.ok(ambulance.position.z > 5.5, `ambulance reached only z=${ambulance.position.z}`)
+    })
+
     it('reuses the same vehicle objects when they reach the end of their path', () => {
-        const { scene, created, simulation } = createSetup()
+        const { scene, created, simulation } = createSetup({ speed: () => 5 })
         simulation.start(straightPath(), straightPath(10, 0), [vehicleModel('car')])
 
         // The vehicles start at progress 0.5; this update pushes them past 1.
