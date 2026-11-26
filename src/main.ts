@@ -21,6 +21,7 @@ import {
     type RoadSegment,
     type TrafficVehicleModel
 } from './data'
+import { createGrassGround } from './ground'
 import { createRoadCenterPath, getLanePosition, getTurnaroundPose } from './vehiclePath'
 
 const isShowcase = window.location.pathname === '/showcase'
@@ -256,6 +257,7 @@ async function initializeRoad(): Promise<void> {
         trafficVehicleModels = loadedTrafficModels
         models.index = 0
 
+        scene.add(createGrassGround(road))
         roadCenterPath = createRoadCenterPath(road)
         reverseRoadPath = createRoadCenterPath(road, true)
         // Keep progress 0 on both paths clear for the ambulance.
