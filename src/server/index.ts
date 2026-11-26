@@ -1,7 +1,7 @@
 import express from 'express'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { Road } from './classes'
+import { Road } from './roadBuilder'
 import { getAllVehicleModels, getRoadParts, getTrafficVehicleModels } from './utils'
 
 const app = express()

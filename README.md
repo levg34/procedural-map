@@ -39,10 +39,11 @@ npm run build        # Type-check and create the production client bundle
 
 ## Code map
 
-- `src/client/` — browser code: `main.ts` (Three.js scene), `api.ts` (browser API calls), and placement/light helpers.
-- `src/server/` — Express API, road generation, and filesystem-backed model metadata.
+- `src/client/` — browser code: `main.ts` (Three.js scene), `api.ts` (browser API calls), `trafficSimulation.ts` (vehicle movement and beacon timing), and placement/light helpers.
+- `src/server/` — Express API, road generation (`roadBuilder.ts`), and filesystem-backed model metadata.
 - `src/data/` — shared config and types: road rules, vehicle exclusions, model metadata, and lighting placements. Importable from both client and server.
 - `test/` — road-generation, metadata, and client-helper tests.
+- `docs/future-work.md` — cleanup candidates for future case-by-case work.
 
 ## Browser debugging helpers
 

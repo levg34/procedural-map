@@ -16,7 +16,6 @@ import { FlyControls } from 'three/addons/controls/FlyControls.js'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { GLTFLoader, type GLTF } from 'three/addons/loaders/GLTFLoader.js'
 import {
-    ambulanceBeaconPlacements,
     defaultHeadlightPlacement,
     emergencyBeaconPlacements,
     headlightPlacements,
@@ -24,14 +23,15 @@ import {
     type BeaconLightPlacement,
     type HeadlightPlacement
 } from '../data/lights'
-import type { RoadModel, RoadSegment, TrafficVehicleModel } from '../data/models'
+import type { RoadModel, RoadSegment } from '../data/models'
 import { isTrafficVehicleExcluded } from '../data/vehicles'
 import { getRoad, getRoadParts, getRoadShowcase, getVehicleModels } from './api'
 import { createGrassGround } from './ground'
 import { createShowcasePlacements, isShowcaseProp } from './showcase'
 import { createRoadsideLampPlacements } from './streetLamps'
 import { enableHeadlightGlow, enableTailLightGlow, hasHeadlights } from './vehicleLights'
-import { createRoadCenterPath, getLanePosition, getTurnaroundPose } from './vehiclePath'
+import { createTrafficSimulation, type LoadedTrafficVehicleModel, type VehicleFactory } from './trafficSimulation'
+import { createRoadCenterPath } from './vehiclePath'
 
 const isShowcase = window.location.pathname === '/showcase'
 const reverseTrafficVehicleCount = isShowcase ? 1 : 8
@@ -40,17 +40,6 @@ const laneOffset = 0.16
 
 type LoadedRoadModel = RoadModel & {
     model: GLTF
-}
-
-type LoadedTrafficVehicleModel = TrafficVehicleModel & {
-    model: GLTF
-}
-
-type TrafficVehicle = {
-    object: Group
-    path: ReturnType<typeof createRoadCenterPath>
-    progress: number
-    beaconLights: PointLight[]
 }
 
 const models: {
@@ -81,6 +70,21 @@ const cameraFollowOffset = camera.position.clone()
 
 scene.add(new AmbientLight(0x404040))
 scene.add(new DirectionalLight(0xffffff, 0.5))
+
+const createVehicle: VehicleFactory = (model) => {
+    const vehicle = model.model.scene.clone()
+    const beaconLights = prepareVehicle(vehicle, model.name)
+    return { object: vehicle, beaconLights }
+}
+
+const simulation = createTrafficSimulation({
+    scene,
+    laneOffset,
+    isShowcase,
+    reverseTrafficVehicleCount,
+    forwardTrafficVehicleCount,
+    createVehicle
+})
 
 const loadModel = (url: string): Promise<GLTF> => {
     const loader = new GLTFLoader()
@@ -141,25 +145,14 @@ function toggleCameraMode(): void {
 }
 
 let ambulance: Group | undefined
-let ambulanceBeaconLights: PointLight[] = []
-let parkedBeaconLights: PointLight[] = []
-let trafficVehicleModels: LoadedTrafficVehicleModel[] = []
-const trafficVehicles: TrafficVehicle[] = []
-let lastTrafficVehicleModelName: string | undefined
-let roadCenterPath: ReturnType<typeof createRoadCenterPath> | undefined
-let reverseRoadPath: ReturnType<typeof createRoadCenterPath> | undefined
-let ambulanceProgress = 0
-let ambulanceReturning = false
-let ambulanceTurnProgress: number | undefined
 
 async function initializeAmbulance(): Promise<void> {
     try {
         const gltf = await loadModel('/model/cars/ambulance.glb')
         ambulance = gltf.scene
-        ambulance.scale.set(0.2, 0.2, 0.2)
-        addVehicleLights(ambulance, headlightPlacements.ambulance)
-        ambulanceBeaconLights = addBeaconLights(ambulance, ambulanceBeaconPlacements)
+        const beaconLights = prepareVehicle(ambulance, 'ambulance')
         scene.add(ambulance)
+        simulation.setAmbulance(ambulance, beaconLights)
     } catch (error: unknown) {
         console.error('Failed to load ambulance model:', error)
     }
@@ -191,10 +184,10 @@ function addBeaconLights(vehicle: Group, placements: BeaconLightPlacement[]): Po
     })
 }
 
-function toggleBeaconLights(lights: PointLight[]): void {
-    lights.forEach((light) => {
-        light.visible = !light.visible
-    })
+function prepareVehicle(vehicle: Group, modelName: string): PointLight[] {
+    vehicle.scale.set(0.2, 0.2, 0.2)
+    addVehicleLights(vehicle, headlightPlacements[modelName] ?? defaultHeadlightPlacement)
+    return addBeaconLights(vehicle, emergencyBeaconPlacements[modelName] ?? [])
 }
 
 function addStreetLightGlow(prop: Group, name: string): void {
@@ -254,46 +247,23 @@ function addRoadsideLamps(centerPath: ReturnType<typeof createRoadCenterPath>): 
     }
 }
 
-function addParkedVehicles(road: RoadSegment[], vehicleModels: LoadedTrafficVehicleModel[]): void {
+function addParkedVehicles(road: RoadSegment[], vehicleModels: LoadedTrafficVehicleModel[]): PointLight[] {
     const placements = createShowcasePlacements(road, vehicleModels.length, { offset: 1.7, rotation: 0 })
+    const beaconLights: PointLight[] = []
 
     vehicleModels.forEach((model, index) => {
         const placement = placements[index]
         if (!placement) return
 
         const vehicle = model.model.scene.clone()
-        vehicle.scale.set(0.2, 0.2, 0.2)
-        addVehicleLights(vehicle, headlightPlacements[model.name] ?? defaultHeadlightPlacement)
-        parkedBeaconLights.push(...addBeaconLights(vehicle, emergencyBeaconPlacements[model.name] ?? []))
+        beaconLights.push(...prepareVehicle(vehicle, model.name))
         vehicle.position.copy(placement.position)
         vehicle.position.y += 0.02
         vehicle.rotation.y = placement.rotation
         scene.add(vehicle)
     })
-}
 
-function createTrafficVehicle(path: ReturnType<typeof createRoadCenterPath>, progress: number): TrafficVehicle {
-    const differentModels = trafficVehicleModels.filter((model) => model.name !== lastTrafficVehicleModelName)
-    const candidates = differentModels.length > 0 ? differentModels : trafficVehicleModels
-    const model = candidates[Math.floor(Math.random() * candidates.length)]
-    if (!model) throw new Error('No traffic vehicle models available')
-
-    const vehicle = model.model.scene.clone()
-    vehicle.scale.set(0.2, 0.2, 0.2)
-    addVehicleLights(vehicle, headlightPlacements[model.name] ?? defaultHeadlightPlacement)
-    const beaconLights = addBeaconLights(vehicle, emergencyBeaconPlacements[model.name] ?? [])
-    scene.add(vehicle)
-    lastTrafficVehicleModelName = model.name
-
-    return { object: vehicle, path, progress, beaconLights }
-}
-
-function respawnTrafficVehicle(trafficVehicle: TrafficVehicle): void {
-    scene.remove(trafficVehicle.object)
-    const replacement = createTrafficVehicle(trafficVehicle.path, 0)
-    trafficVehicle.object = replacement.object
-    trafficVehicle.progress = replacement.progress
-    trafficVehicle.beaconLights = replacement.beaconLights
+    return beaconLights
 }
 
 void initializeAmbulance()
@@ -342,26 +312,19 @@ async function initializeRoad(): Promise<void> {
             )
         ])
         models.road = loadedRoadModels
-        trafficVehicleModels = loadedVehicleModels.filter((model) => !isTrafficVehicleExcluded(model.name))
+        const trafficVehicleModels = loadedVehicleModels.filter((model) => !isTrafficVehicleExcluded(model.name))
         models.index = 0
 
         scene.add(createGrassGround(road))
         const centerPath = createRoadCenterPath(road)
-        roadCenterPath = centerPath
-        reverseRoadPath = createRoadCenterPath(road, true)
+        const reversePath = createRoadCenterPath(road, true)
         if (isShowcase) {
             addShowcaseProps(road)
-            addParkedVehicles(road, loadedVehicleModels)
+            simulation.addParkedBeaconLights(addParkedVehicles(road, loadedVehicleModels))
         } else {
             addRoadsideLamps(centerPath)
         }
-        // Keep progress 0 on both paths clear for the ambulance.
-        for (let index = 0; index < reverseTrafficVehicleCount; index++) {
-            trafficVehicles.push(createTrafficVehicle(reverseRoadPath, (index + 1) / (reverseTrafficVehicleCount + 1)))
-        }
-        for (let index = 0; index < forwardTrafficVehicleCount; index++) {
-            trafficVehicles.push(createTrafficVehicle(roadCenterPath, (index + 1) / (forwardTrafficVehicleCount + 1)))
-        }
+        simulation.start(centerPath, reversePath, trafficVehicleModels)
         road.forEach((segment: RoadSegment) => {
             const roadModel = models.road.find((model) => segment.name === model.name)
             if (!roadModel) throw new Error(`Missing road model: ${segment.name}`)
@@ -383,7 +346,6 @@ async function initializeRoad(): Promise<void> {
 
 void initializeRoad()
 
-let iter = 0
 let lastFrameTime = performance.now()
 let previousAmbulancePosition: Vector3 | undefined
 const flyMovement = new Vector3()
@@ -393,43 +355,14 @@ function animate(timestamp = performance.now()): void {
     const deltaTime = Math.min((timestamp - lastFrameTime) / 1000, 0.05)
     lastFrameTime = timestamp
 
-    if (ambulance && roadCenterPath && reverseRoadPath) {
-        const path = !isShowcase && ambulanceReturning ? reverseRoadPath : roadCenterPath
-        let ambulancePose: { position: Vector3; tangent: Vector3 }
+    simulation.update(deltaTime)
 
-        if (ambulanceTurnProgress === undefined) {
-            const progressDelta = (2 * deltaTime) / path.getLength()
-            ambulanceProgress += progressDelta
-            if (ambulanceProgress >= 1) {
-                if (isShowcase) {
-                    ambulanceProgress %= 1
-                } else {
-                    ambulanceProgress = 1
-                    ambulanceTurnProgress = 0
-                }
-            }
-            ambulancePose = getLanePosition(path, ambulanceProgress, laneOffset)
-        } else {
-            ambulanceTurnProgress += (2 * deltaTime) / (Math.PI * laneOffset)
-            ambulancePose = getTurnaroundPose(path, Math.min(ambulanceTurnProgress, 1), laneOffset)
-            if (ambulanceTurnProgress >= 1) {
-                ambulanceTurnProgress = undefined
-                ambulanceReturning = !ambulanceReturning
-                ambulanceProgress = 0
-            }
-        }
-
-        ambulance.position.copy(ambulancePose.position)
-        ambulance.rotation.y = Math.atan2(-ambulancePose.tangent.x, -ambulancePose.tangent.z)
-        ambulance.position.y += 0.02
-
-        if (cameraMode === 'follow' && previousAmbulancePosition) {
-            const movement = ambulance.position.clone().sub(previousAmbulancePosition)
-            camera.position.add(movement)
-            controls.target.add(movement)
-        }
-        previousAmbulancePosition = ambulance.position.clone()
+    if (ambulance && cameraMode === 'follow' && previousAmbulancePosition) {
+        const movement = ambulance.position.clone().sub(previousAmbulancePosition)
+        camera.position.add(movement)
+        controls.target.add(movement)
     }
+    if (ambulance) previousAmbulancePosition = ambulance.position.clone()
 
     flyMovement.copy(camera.position)
     flyControls.update(deltaTime)
@@ -437,30 +370,6 @@ function animate(timestamp = performance.now()): void {
         // Keep the orbit target with the camera so OrbitControls can still own rotation.
         flyMovement.subVectors(camera.position, flyMovement)
         controls.target.add(flyMovement)
-    }
-
-    if (iter === 30) {
-        toggleBeaconLights(ambulanceBeaconLights)
-        toggleBeaconLights(parkedBeaconLights)
-        for (const trafficVehicle of trafficVehicles) {
-            toggleBeaconLights(trafficVehicle.beaconLights)
-        }
-        iter = 0
-    }
-    iter++
-
-    if (trafficVehicles.length > 0) {
-        for (const trafficVehicle of trafficVehicles) {
-            const path = trafficVehicle.path
-            const progressDelta = (2 * deltaTime) / path.getLength()
-            trafficVehicle.progress += progressDelta
-            if (trafficVehicle.progress >= 1) respawnTrafficVehicle(trafficVehicle)
-
-            const trafficPose = getLanePosition(path, trafficVehicle.progress, laneOffset)
-            trafficVehicle.object.position.copy(trafficPose.position)
-            trafficVehicle.object.position.y += 0.02
-            trafficVehicle.object.rotation.y = Math.atan2(-trafficPose.tangent.x, -trafficPose.tangent.z)
-        }
     }
 
     controls.update()

@@ -3,7 +3,7 @@ import { CurvePath, LineCurve3, Vector3 } from 'three'
 import { describe, it } from 'vitest'
 import { createRoadsideLampPlacements } from '../src/client/streetLamps'
 import { createRoadCenterPath } from '../src/client/vehiclePath'
-import { Road } from '../src/server/classes'
+import { Road } from '../src/server/roadBuilder'
 
 describe('roadside street lamps', () => {
     it('places lamps on both sides of the generated road with arms facing it', async () => {
