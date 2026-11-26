@@ -208,6 +208,38 @@ describe('traffic simulation', () => {
         assert.deepStrictEqual(spawned.slice(2).sort(), names)
     })
 
+    it('keeps the ambulance clear of traffic over many laps', () => {
+        const minimumGap = 1
+        const created: Group[] = []
+        const { simulation } = createSetup({
+            reverseTrafficVehicleCount: 2,
+            forwardTrafficVehicleCount: 2,
+            minimumGap,
+            createVehicle: () => {
+                const object = new Group()
+                created.push(object)
+                return { object, beaconLights: [] }
+            }
+        })
+        const ambulance = new Group()
+        simulation.setAmbulance(ambulance, [])
+        simulation.start(straightPath(), straightPath(10, 0), [vehicleModel('car')])
+
+        let closest = Infinity
+        for (let step = 0; step < 60 * 120; step++) {
+            simulation.update(1 / 60)
+
+            // Driving lanes are encoded in x; skip the U-turn frames where x sweeps.
+            if (Math.abs(Math.abs(ambulance.position.x) - laneOffset) > 1e-6) continue
+            for (const vehicle of created) {
+                if (Math.sign(vehicle.position.x) !== Math.sign(ambulance.position.x)) continue
+                closest = Math.min(closest, Math.abs(ambulance.position.z - vehicle.position.z))
+            }
+        }
+
+        assert.ok(closest >= minimumGap - 0.05, `closest ambulance-to-traffic gap was ${closest}`)
+    })
+
     it('reuses the same vehicle objects when they reach the end of their path', () => {
         const { scene, created, simulation } = createSetup()
         simulation.start(straightPath(), straightPath(10, 0), [vehicleModel('car')])

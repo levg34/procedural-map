@@ -6,6 +6,7 @@ import { getLanePosition, getTurnaroundPose, type RoadPath } from './vehiclePath
 
 const vehicleYOffset = 0.02
 const blinkInterval = 30
+const defaultMinimumGap = 1
 
 export type LoadedTrafficVehicleModel = TrafficVehicleModel & {
     model: GLTF
@@ -27,6 +28,7 @@ export type TrafficSimulationOptions = {
     createVehicle: VehicleFactory
     random?: () => number
     weight?: (model: LoadedTrafficVehicleModel) => number
+    minimumGap?: number
 }
 
 export type TrafficSimulation = {
@@ -85,6 +87,27 @@ function weightedDeck<T>(items: readonly T[], weight: (item: T) => number, rando
     return deck
 }
 
+/** Progress to place a vehicle entering at the start of a path. A vehicle that
+ * would land within `minimumGap` of another is nudged just ahead of it; moving
+ * past one vehicle can bring us too close to the next, hence the repeat. */
+function clearStartProgress(path: RoadPath, occupied: number[], minimumGap: number): number {
+    const gapProgress = minimumGap / path.getLength()
+    let candidate = 0
+
+    for (let pass = 0; pass < occupied.length; pass++) {
+        let moved = false
+        for (const progress of occupied) {
+            if (Math.abs(progress - candidate) < gapProgress) {
+                candidate = progress + gapProgress
+                moved = true
+            }
+        }
+        if (!moved) break
+    }
+
+    return candidate
+}
+
 export function createTrafficSimulation(options: TrafficSimulationOptions): TrafficSimulation {
     const {
         scene,
@@ -94,7 +117,8 @@ export function createTrafficSimulation(options: TrafficSimulationOptions): Traf
         forwardTrafficVehicleCount,
         createVehicle,
         random = Math.random,
-        weight = (model) => getTrafficVehicleWeight(model.name)
+        weight = (model) => getTrafficVehicleWeight(model.name),
+        minimumGap = defaultMinimumGap
     } = options
 
     let ambulance: Group | undefined
@@ -124,10 +148,32 @@ export function createTrafficSimulation(options: TrafficSimulationOptions): Traf
         return { ...vehicle, path, progress }
     }
 
+    // During a U-turn the ambulance is already heading into the other lane.
+    function ambulanceLane(): RoadPath | undefined {
+        if (!centerPath || !reversePath) return centerPath
+        return ambulanceReturning !== (ambulanceTurnProgress !== undefined) ? reversePath : centerPath
+    }
+
+    function trafficOnPath(path: RoadPath, except?: TrafficVehicle): number[] {
+        return trafficVehicles
+            .filter((vehicle) => vehicle !== except && vehicle.path === path)
+            .map((vehicle) => vehicle.progress)
+    }
+
+    function ambulanceBlockers(path: RoadPath): number[] {
+        if (!ambulance || ambulanceLane() !== path) return []
+        // While turning, the ambulance sits at the start of the destination lane.
+        return [ambulanceTurnProgress === undefined ? ambulanceProgress : 0]
+    }
+
     function respawnVehicle(vehicle: TrafficVehicle): void {
         // Reuse the same object and lights: adding/removing lights changes the
         // shader program cache key and freezes the page on recompilation.
-        vehicle.progress = 0
+        vehicle.progress = clearStartProgress(
+            vehicle.path,
+            [...trafficOnPath(vehicle.path, vehicle), ...ambulanceBlockers(vehicle.path)],
+            minimumGap
+        )
     }
 
     function updateAmbulance(deltaTime: number): void {
@@ -154,7 +200,8 @@ export function createTrafficSimulation(options: TrafficSimulationOptions): Traf
             if (ambulanceTurnProgress >= 1) {
                 ambulanceTurnProgress = undefined
                 ambulanceReturning = !ambulanceReturning
-                ambulanceProgress = 0
+                const nextPath = ambulanceLane()
+                ambulanceProgress = nextPath ? clearStartProgress(nextPath, trafficOnPath(nextPath), minimumGap) : 0
             }
         }
 
