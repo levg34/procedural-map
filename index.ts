@@ -8,10 +8,10 @@ const app = express()
 const rootDirectory = dirname(fileURLToPath(import.meta.url))
 const port = 3210
 
-app.use(express.static(join(rootDirectory, 'dist')))
+app.use(express.static(join(rootDirectory, 'public')))
 
 app.get(['/', '/showcase'], (_req, res) => {
-    res.sendFile(join(rootDirectory, 'dist', 'index.html'))
+    res.sendFile(join(rootDirectory, 'public', 'index.html'))
 })
 
 app.get('/road/showcase', async (_req, res) => {
