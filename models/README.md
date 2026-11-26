@@ -109,8 +109,10 @@ and type prefixes from the traffic pool (currently `tractorPolice` and the
 `tractor` family). Wheel assets are parts, not vehicles, so they are filtered
 separately. Vehicles whose GLBs contain `lightFront` geometry get emissive
 headlights and headlight beams; `race` and `raceFuture` have no headlights and
-therefore project no beams. Ambulances, firetrucks, police cars, and police
-tractors also have animated emergency lights.
+therefore project no beams. Vehicles with `lightBack` geometry get emissive tail
+lights that glow without adding red beams. The ambulance, race cars, tractor,
+and tractor shovel have no `lightBack` geometry. Ambulances, firetrucks, police
+cars, and police tractors also have animated emergency lights.
 
 The showcase additionally parks one of every car model in dedicated lanes beside
 the road, including the models excluded from traffic, with working headlights

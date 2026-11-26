@@ -28,7 +28,7 @@ import {
 import { createGrassGround } from './ground'
 import { createShowcasePlacements, isShowcaseProp, streetLightHeads } from './showcase'
 import { createRoadsideLampPlacements } from './streetLamps'
-import { enableHeadlightGlow, hasHeadlights } from './vehicleLights'
+import { enableHeadlightGlow, enableTailLightGlow, hasHeadlights } from './vehicleLights'
 import { createRoadCenterPath, getLanePosition, getTurnaroundPose } from './vehiclePath'
 
 const isShowcase = window.location.pathname === '/showcase'
@@ -207,7 +207,7 @@ async function initializeAmbulance(): Promise<void> {
         const gltf = await loadModel('/model/cars/ambulance.glb')
         ambulance = gltf.scene
         ambulance.scale.set(0.2, 0.2, 0.2)
-        addHeadlights(ambulance, headlightPlacements.ambulance)
+        addVehicleLights(ambulance, headlightPlacements.ambulance)
         ambulanceBeaconLights = addBeaconLights(ambulance, ambulanceBeaconPlacements)
         scene.add(ambulance)
     } catch (error: unknown) {
@@ -215,7 +215,8 @@ async function initializeAmbulance(): Promise<void> {
     }
 }
 
-function addHeadlights(vehicle: Group, placement: HeadlightPlacement = defaultHeadlightPlacement): void {
+function addVehicleLights(vehicle: Group, placement: HeadlightPlacement = defaultHeadlightPlacement): void {
+    enableTailLightGlow(vehicle)
     if (!hasHeadlights(vehicle)) return
     enableHeadlightGlow(vehicle)
 
@@ -312,7 +313,7 @@ function addParkedVehicles(road: RoadSegment[], vehicleModels: LoadedTrafficVehi
 
         const vehicle = model.model.scene.clone()
         vehicle.scale.set(0.2, 0.2, 0.2)
-        addHeadlights(vehicle, headlightPlacements[model.name] ?? defaultHeadlightPlacement)
+        addVehicleLights(vehicle, headlightPlacements[model.name] ?? defaultHeadlightPlacement)
         parkedBeaconLights.push(...addBeaconLights(vehicle, emergencyBeaconPlacements[model.name] ?? []))
         vehicle.position.copy(placement.position)
         vehicle.position.y += 0.02
@@ -329,7 +330,7 @@ function createTrafficVehicle(path: ReturnType<typeof createRoadCenterPath>, pro
 
     const vehicle = model.model.scene.clone()
     vehicle.scale.set(0.2, 0.2, 0.2)
-    addHeadlights(vehicle, headlightPlacements[model.name] ?? defaultHeadlightPlacement)
+    addVehicleLights(vehicle, headlightPlacements[model.name] ?? defaultHeadlightPlacement)
     const beaconLights = addBeaconLights(vehicle, emergencyBeaconPlacements[model.name] ?? [])
     scene.add(vehicle)
     lastTrafficVehicleModelName = model.name

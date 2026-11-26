@@ -16,9 +16,9 @@ along both sides, or `http://localhost:5173/showcase` for the debugging
 showcase. The showcase lays
 out one of every non-road model (street lights, construction props, bridge
 pillars, and tiles) and parks every vehicle in separate lanes beside the road,
-lighting the headlights of the models that have them alongside the moving
-ambulance and one opposite-direction vehicle. Street lights glow and cast warm
-light pools. On `/showcase`, press
+lighting the headlights and tail lights of the models that have them, alongside
+the moving ambulance and one opposite-direction vehicle. Street lights glow and
+cast warm light pools. On `/showcase`, press
 **C** to switch between following the ambulance and three.js `FlyControls`
 translation while `OrbitControls` stays active for orbiting and zooming;
 **WASD** move, **R/F** lower/raise, mouse drag orbits, and the wheel zooms.
