@@ -11,8 +11,9 @@ npm ci
 npm run dev
 ```
 
-Open `http://localhost:5173` for a generated road or
-`http://localhost:5173/showcase` for the debugging showcase. The showcase lays
+Open `http://localhost:5173` for a generated road with glowing street lamps
+along both sides, or `http://localhost:5173/showcase` for the debugging
+showcase. The showcase lays
 out one of every non-road model (street lights, construction props, bridge
 pillars, and tiles) and parks every vehicle with its headlights on in separate
 lanes beside the road, alongside the moving ambulance and one opposite-direction

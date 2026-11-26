@@ -27,6 +27,7 @@ import {
 } from './data'
 import { createGrassGround } from './ground'
 import { createShowcasePlacements, isShowcaseProp, streetLightHeads } from './showcase'
+import { createRoadsideLampPlacements } from './streetLamps'
 import { createRoadCenterPath, getLanePosition, getTurnaroundPose } from './vehiclePath'
 
 const isShowcase = window.location.pathname === '/showcase'
@@ -261,6 +262,19 @@ function addStreetLightGlow(prop: Group, name: string): void {
     }
 }
 
+function addCenteredProp(model: LoadedRoadModel, position: Vector3, rotation: number): void {
+    // The GLB node pushes geometry 0.75 forward; center it on the placement.
+    const prop = model.model.scene.clone()
+    prop.position.z = -0.75
+    addStreetLightGlow(prop, model.name)
+
+    const holder = new Object3D()
+    holder.add(prop)
+    holder.position.copy(position)
+    holder.rotation.y = rotation
+    scene.add(holder)
+}
+
 function addShowcaseProps(road: RoadSegment[]): void {
     const propModels = models.road.filter((model) => isShowcaseProp(model.name))
     const placements = createShowcasePlacements(road, propModels.length, {
@@ -270,19 +284,19 @@ function addShowcaseProps(road: RoadSegment[]): void {
 
     propModels.forEach((model, index) => {
         const placement = placements[index]
-        if (!placement) return
-
-        // The GLB node pushes geometry 0.75 forward; center it on the placement.
-        const prop = model.model.scene.clone()
-        prop.position.z = -0.75
-        addStreetLightGlow(prop, model.name)
-
-        const holder = new Object3D()
-        holder.add(prop)
-        holder.position.copy(placement.position)
-        holder.rotation.y = placement.rotation
-        scene.add(holder)
+        if (placement) addCenteredProp(model, placement.position, placement.rotation)
     })
+}
+
+function addRoadsideLamps(centerPath: ReturnType<typeof createRoadCenterPath>): void {
+    const lampModel =
+        models.road.find((model) => model.name === 'light_curved') ??
+        models.road.find((model) => model.name.startsWith('light_'))
+    if (!lampModel) return
+
+    for (const placement of createRoadsideLampPlacements(centerPath)) {
+        addCenteredProp(lampModel, placement.position, placement.rotation)
+    }
 }
 
 function addParkedVehicles(road: RoadSegment[], vehicleModels: LoadedTrafficVehicleModel[]): void {
@@ -377,11 +391,14 @@ async function initializeRoad(): Promise<void> {
         models.index = 0
 
         scene.add(createGrassGround(road))
-        roadCenterPath = createRoadCenterPath(road)
+        const centerPath = createRoadCenterPath(road)
+        roadCenterPath = centerPath
         reverseRoadPath = createRoadCenterPath(road, true)
         if (isShowcase) {
             addShowcaseProps(road)
             addParkedVehicles(road, loadedVehicleModels)
+        } else {
+            addRoadsideLamps(centerPath)
         }
         // Keep progress 0 on both paths clear for the ambulance.
         for (let index = 0; index < reverseTrafficVehicleCount; index++) {

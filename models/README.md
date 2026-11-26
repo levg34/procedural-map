@@ -130,7 +130,9 @@ and split/fork models start with `road_` and are only available in the Space-key
 preview; the procedural road generator does not connect them.
 Street-light and construction-light lamp materials glow and cast warm point
 lights in the showcase; lamp-head positions live in
-[`src/showcase.ts`](../src/showcase.ts).
+[`src/showcase.ts`](../src/showcase.ts). The generated route also places evenly
+spaced `light_curved` lamps along both road sides with their arms pointing at the
+road, using placements from [`src/streetLamps.ts`](../src/streetLamps.ts).
 
 ## Asset source and license
 
