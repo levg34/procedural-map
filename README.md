@@ -16,9 +16,13 @@ Open `http://localhost:5173` for a generated road or
 out one of every non-road model (street lights, construction props, bridge
 pillars, and tiles) and parks every vehicle with its headlights on in separate
 lanes beside the road, alongside the moving ambulance and one opposite-direction
-vehicle. Street lights glow and cast warm light pools. Vite serves the browser app and proxies
-API/model requests to Express on port 3210. Press **Space** to preview road
-models.
+vehicle. Street lights glow and cast warm light pools. On `/showcase`, press
+**C** to switch between following the ambulance and three.js `FlyControls`
+translation while `OrbitControls` stays active for orbiting and zooming;
+**WASD** move, **R/F** lower/raise, mouse drag orbits, and the wheel zooms.
+Press **C** again to resume following. Vite serves the browser app and
+proxies API/model requests to Express on port 3210. Press **Space** to preview
+road models.
 
 For a production build and server, run `npm start` and open
 `http://localhost:3210` or `http://localhost:3210/showcase`.

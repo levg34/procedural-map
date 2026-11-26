@@ -12,6 +12,7 @@ import {
     WebGLRenderer,
     type Group
 } from 'three'
+import { FlyControls } from 'three/addons/controls/FlyControls.js'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { GLTFLoader, type GLTF } from 'three/addons/loaders/GLTFLoader.js'
 import { isTrafficVehicleExcluded } from '../trafficVehicleData'
@@ -117,6 +118,14 @@ renderer.setSize(window.innerWidth, window.innerHeight)
 document.body.appendChild(renderer.domElement)
 
 const controls = new OrbitControls(camera, renderer.domElement)
+const flyControls = new FlyControls(camera, renderer.domElement)
+flyControls.movementSpeed = 0
+// OrbitControls owns rotation; FlyControls supplies translation only.
+flyControls.rollSpeed = 0
+flyControls.dragToLook = true
+
+let cameraMode: 'follow' | 'free' = 'follow'
+const cameraFollowOffset = camera.position.clone()
 
 scene.add(new AmbientLight(0x404040))
 scene.add(new DirectionalLight(0xffffff, 0.5))
@@ -134,6 +143,49 @@ const loadModel = (url: string): Promise<GLTF> => {
             reject
         )
     })
+}
+
+function updateCameraHint(hint: HTMLDivElement | undefined): void {
+    if (!hint) return
+    hint.textContent =
+        cameraMode === 'follow'
+            ? 'Camera: following ambulance · C: free-fly'
+            : 'Camera: free-fly · WASD move · R/F up/down · drag orbit · wheel zoom · C: follow'
+}
+
+function createCameraHint(): HTMLDivElement | undefined {
+    if (!isShowcase) return undefined
+
+    const hint = document.createElement('div')
+    hint.style.position = 'fixed'
+    hint.style.bottom = '12px'
+    hint.style.left = '12px'
+    hint.style.padding = '7px 10px'
+    hint.style.borderRadius = '4px'
+    hint.style.background = 'rgba(0, 0, 0, 0.6)'
+    hint.style.color = 'white'
+    hint.style.font = '12px sans-serif'
+    hint.style.pointerEvents = 'none'
+    document.body.appendChild(hint)
+    updateCameraHint(hint)
+    return hint
+}
+
+const cameraHint = createCameraHint()
+
+function toggleCameraMode(): void {
+    const ambulancePosition = ambulance?.position ?? new Vector3()
+    if (cameraMode === 'follow') {
+        cameraFollowOffset.copy(camera.position).sub(ambulancePosition)
+        cameraMode = 'free'
+    } else {
+        cameraMode = 'follow'
+        camera.position.copy(ambulancePosition).add(cameraFollowOffset)
+        controls.target.copy(ambulancePosition)
+    }
+    flyControls.movementSpeed = cameraMode === 'free' ? 3 : 0
+    previousAmbulancePosition = undefined
+    updateCameraHint(cameraHint)
 }
 
 let ambulance: Group | undefined
@@ -362,6 +414,7 @@ void initializeRoad()
 let iter = 0
 let lastFrameTime = performance.now()
 let previousAmbulancePosition: Vector3 | undefined
+const flyMovement = new Vector3()
 function animate(timestamp = performance.now()): void {
     requestAnimationFrame(animate)
 
@@ -398,12 +451,20 @@ function animate(timestamp = performance.now()): void {
         ambulance.rotation.y = Math.atan2(-ambulancePose.tangent.x, -ambulancePose.tangent.z)
         ambulance.position.y += 0.02
 
-        if (previousAmbulancePosition) {
+        if (cameraMode === 'follow' && previousAmbulancePosition) {
             const movement = ambulance.position.clone().sub(previousAmbulancePosition)
             camera.position.add(movement)
             controls.target.add(movement)
         }
         previousAmbulancePosition = ambulance.position.clone()
+    }
+
+    flyMovement.copy(camera.position)
+    flyControls.update(deltaTime)
+    if (cameraMode === 'free') {
+        // Keep the orbit target with the camera so OrbitControls can still own rotation.
+        flyMovement.subVectors(camera.position, flyMovement)
+        controls.target.add(flyMovement)
     }
 
     if (iter === 30) {
@@ -437,7 +498,9 @@ function animate(timestamp = performance.now()): void {
 animate()
 
 document.addEventListener('keydown', (event) => {
-    if (event.key === ' ') loadRoadPreview()
+    const key = event.key.toLowerCase()
+    if (key === ' ') loadRoadPreview()
+    if (isShowcase && key === 'c' && !event.repeat) toggleCameraMode()
 })
 
 window.addEventListener('resize', () => {
