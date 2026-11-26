@@ -194,3 +194,25 @@ export function getLanePosition(
 
     return { position, tangent }
 }
+
+export function getTurnaroundPose(
+    centerPath: CurvePath<Vector3>,
+    progress: number,
+    laneOffset: number
+): { position: Vector3; tangent: Vector3 } {
+    const center = centerPath.getPointAt(1)
+    const tangent = centerPath.getTangentAt(1).normalize()
+    const laneDirection = tangent
+        .clone()
+        .cross(new Vector3(0, 1, 0))
+        .normalize()
+    const angle = Math.PI * progress
+
+    return {
+        position: center
+            .clone()
+            .addScaledVector(laneDirection, laneOffset * Math.cos(angle))
+            .addScaledVector(tangent, laneOffset * Math.sin(angle)),
+        tangent: tangent.clone().multiplyScalar(Math.cos(angle)).addScaledVector(laneDirection, -Math.sin(angle))
+    }
+}

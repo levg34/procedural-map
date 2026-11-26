@@ -21,11 +21,12 @@ import {
     type RoadSegment,
     type TrafficVehicleModel
 } from './data'
-import { createRoadCenterPath, getLanePosition } from './vehiclePath'
+import { createRoadCenterPath, getLanePosition, getTurnaroundPose } from './vehiclePath'
 
 const isShowcase = window.location.pathname === '/showcase'
 const reverseTrafficVehicleCount = isShowcase ? 1 : 8
 const forwardTrafficVehicleCount = isShowcase ? 0 : 4
+const laneOffset = 0.16
 
 type LoadedRoadModel = RoadModel & {
     model: GLTF
@@ -135,7 +136,10 @@ let trafficVehicleModels: LoadedTrafficVehicleModel[] = []
 const trafficVehicles: TrafficVehicle[] = []
 let lastTrafficVehicleModelName: string | undefined
 let roadCenterPath: ReturnType<typeof createRoadCenterPath> | undefined
+let reverseRoadPath: ReturnType<typeof createRoadCenterPath> | undefined
 let ambulanceProgress = 0
+let ambulanceReturning = false
+let ambulanceTurnProgress: number | undefined
 
 async function initializeAmbulance(): Promise<void> {
     try {
@@ -252,11 +256,11 @@ async function initializeRoad(): Promise<void> {
         models.index = 0
 
         roadCenterPath = createRoadCenterPath(road)
-        const reverseRoadPath = createRoadCenterPath(road, true)
+        reverseRoadPath = createRoadCenterPath(road, true)
+        // Keep progress 0 on both paths clear for the ambulance.
         for (let index = 0; index < reverseTrafficVehicleCount; index++) {
-            trafficVehicles.push(createTrafficVehicle(reverseRoadPath, index / reverseTrafficVehicleCount))
+            trafficVehicles.push(createTrafficVehicle(reverseRoadPath, (index + 1) / (reverseTrafficVehicleCount + 1)))
         }
-        // Keep progress 0 on the forward path clear for the ambulance.
         for (let index = 0; index < forwardTrafficVehicleCount; index++) {
             trafficVehicles.push(createTrafficVehicle(roadCenterPath, (index + 1) / (forwardTrafficVehicleCount + 1)))
         }
@@ -290,10 +294,32 @@ function animate(timestamp = performance.now()): void {
     const deltaTime = Math.min((timestamp - lastFrameTime) / 1000, 0.05)
     lastFrameTime = timestamp
 
-    if (ambulance && roadCenterPath) {
-        const progressDelta = (2 * deltaTime) / roadCenterPath.getLength()
-        ambulanceProgress = (ambulanceProgress + progressDelta) % 1
-        const ambulancePose = getLanePosition(roadCenterPath, ambulanceProgress, 0.16)
+    if (ambulance && roadCenterPath && reverseRoadPath) {
+        const path = !isShowcase && ambulanceReturning ? reverseRoadPath : roadCenterPath
+        let ambulancePose: { position: Vector3; tangent: Vector3 }
+
+        if (ambulanceTurnProgress === undefined) {
+            const progressDelta = (2 * deltaTime) / path.getLength()
+            ambulanceProgress += progressDelta
+            if (ambulanceProgress >= 1) {
+                if (isShowcase) {
+                    ambulanceProgress %= 1
+                } else {
+                    ambulanceProgress = 1
+                    ambulanceTurnProgress = 0
+                }
+            }
+            ambulancePose = getLanePosition(path, ambulanceProgress, laneOffset)
+        } else {
+            ambulanceTurnProgress += (2 * deltaTime) / (Math.PI * laneOffset)
+            ambulancePose = getTurnaroundPose(path, Math.min(ambulanceTurnProgress, 1), laneOffset)
+            if (ambulanceTurnProgress >= 1) {
+                ambulanceTurnProgress = undefined
+                ambulanceReturning = !ambulanceReturning
+                ambulanceProgress = 0
+            }
+        }
+
         ambulance.position.copy(ambulancePose.position)
         ambulance.rotation.y = Math.atan2(-ambulancePose.tangent.x, -ambulancePose.tangent.z)
         ambulance.position.y += 0.02
@@ -322,7 +348,7 @@ function animate(timestamp = performance.now()): void {
             trafficVehicle.progress += progressDelta
             if (trafficVehicle.progress >= 1) respawnTrafficVehicle(trafficVehicle)
 
-            const trafficPose = getLanePosition(path, trafficVehicle.progress, 0.16)
+            const trafficPose = getLanePosition(path, trafficVehicle.progress, laneOffset)
             trafficVehicle.object.position.copy(trafficPose.position)
             trafficVehicle.object.position.y += 0.02
             trafficVehicle.object.rotation.y = Math.atan2(-trafficPose.tangent.x, -trafficPose.tangent.z)

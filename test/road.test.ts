@@ -3,7 +3,7 @@ import { CurvePath, Vector3 } from 'three'
 import { beforeAll, describe, it } from 'vitest'
 import { Road } from '../classes'
 import { roadTypes } from '../roadData'
-import { createRoadCenterPath, getLanePosition } from '../src/vehiclePath'
+import { createRoadCenterPath, getLanePosition, getTurnaroundPose } from '../src/vehiclePath'
 import { getRoadParts } from '../utils'
 import { doubleEquals, vectors3Equals } from './testUtils'
 
@@ -184,6 +184,21 @@ describe('Road', () => {
         it('should create a vehicle route for the generated road', () => {
             assert.ok(createRoadCenterPath(road.path).getLength() > 0)
             assert.ok(createRoadCenterPath(road.path, true).getLength() > 0)
+        })
+        it('should turn between opposite lanes at the road end', () => {
+            const forwardPath = createRoadCenterPath(road.path)
+            const reversePath = createRoadCenterPath(road.path, true)
+            const laneOffset = 0.16
+
+            const turnStart = getTurnaroundPose(forwardPath, 0, laneOffset)
+            const turnEnd = getTurnaroundPose(forwardPath, 1, laneOffset)
+            const forwardLane = getLanePosition(forwardPath, 1, laneOffset)
+            const reverseLane = getLanePosition(reversePath, 0, laneOffset)
+
+            assert.ok(turnStart.position.distanceTo(forwardLane.position) < 0.000001)
+            assert.ok(turnEnd.position.distanceTo(reverseLane.position) < 0.000001)
+            assert.ok(turnStart.tangent.dot(forwardLane.tangent) > 0.999999)
+            assert.ok(turnEnd.tangent.dot(reverseLane.tangent) > 0.999999)
         })
         it('should contain road crossings', () => {
             assert.ok(road.path.map((e) => e.name).includes('road_crossing'))
