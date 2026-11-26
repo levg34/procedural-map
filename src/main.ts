@@ -24,6 +24,7 @@ import {
 import { createRoadCenterPath, getLanePosition } from './vehiclePath'
 
 const isShowcase = window.location.pathname === '/showcase'
+const trafficVehicleCount = isShowcase ? 1 : 8
 
 type LoadedRoadModel = RoadModel & {
     model: GLTF
@@ -31,6 +32,12 @@ type LoadedRoadModel = RoadModel & {
 
 type LoadedTrafficVehicleModel = TrafficVehicleModel & {
     model: GLTF
+}
+
+type TrafficVehicle = {
+    object: Group
+    progress: number
+    beaconLights: PointLight[]
 }
 
 type HeadlightPlacement = {
@@ -122,14 +129,12 @@ const loadModel = (url: string): Promise<GLTF> => {
 
 let ambulance: Group | undefined
 let ambulanceBeaconLights: PointLight[] = []
-let trafficVehicle: Group | undefined
 let trafficVehicleModels: LoadedTrafficVehicleModel[] = []
-let currentTrafficVehicleModelName: string | undefined
-let trafficBeaconLights: PointLight[] = []
+const trafficVehicles: TrafficVehicle[] = []
+let lastTrafficVehicleModelName: string | undefined
 let roadCenterPath: ReturnType<typeof createRoadCenterPath> | undefined
 let trafficRoadPath: ReturnType<typeof createRoadCenterPath> | undefined
 let ambulanceProgress = 0
-let trafficVehicleProgress = 0
 
 async function initializeAmbulance(): Promise<void> {
     try {
@@ -172,20 +177,28 @@ function toggleBeaconLights(lights: PointLight[]): void {
     })
 }
 
-function spawnTrafficVehicle(): void {
-    const differentModels = trafficVehicleModels.filter((model) => model.name !== currentTrafficVehicleModelName)
+function createTrafficVehicle(progress: number): TrafficVehicle {
+    const differentModels = trafficVehicleModels.filter((model) => model.name !== lastTrafficVehicleModelName)
     const candidates = differentModels.length > 0 ? differentModels : trafficVehicleModels
     const model = candidates[Math.floor(Math.random() * candidates.length)]
     if (!model) throw new Error('No traffic vehicle models available')
 
-    if (trafficVehicle) scene.remove(trafficVehicle)
-    trafficVehicle = model.model.scene.clone()
-    trafficVehicle.scale.set(0.2, 0.2, 0.2)
-    addHeadlights(trafficVehicle, headlightPlacements[model.name] ?? defaultHeadlightPlacement)
-    trafficBeaconLights = addBeaconLights(trafficVehicle, emergencyBeaconPlacements[model.name] ?? [])
-    scene.add(trafficVehicle)
-    currentTrafficVehicleModelName = model.name
-    trafficVehicleProgress = 0
+    const vehicle = model.model.scene.clone()
+    vehicle.scale.set(0.2, 0.2, 0.2)
+    addHeadlights(vehicle, headlightPlacements[model.name] ?? defaultHeadlightPlacement)
+    const beaconLights = addBeaconLights(vehicle, emergencyBeaconPlacements[model.name] ?? [])
+    scene.add(vehicle)
+    lastTrafficVehicleModelName = model.name
+
+    return { object: vehicle, progress, beaconLights }
+}
+
+function respawnTrafficVehicle(trafficVehicle: TrafficVehicle): void {
+    scene.remove(trafficVehicle.object)
+    const replacement = createTrafficVehicle(0)
+    trafficVehicle.object = replacement.object
+    trafficVehicle.progress = replacement.progress
+    trafficVehicle.beaconLights = replacement.beaconLights
 }
 
 void initializeAmbulance()
@@ -239,7 +252,9 @@ async function initializeRoad(): Promise<void> {
 
         roadCenterPath = createRoadCenterPath(road)
         trafficRoadPath = createRoadCenterPath(road, true)
-        spawnTrafficVehicle()
+        for (let index = 0; index < trafficVehicleCount; index++) {
+            trafficVehicles.push(createTrafficVehicle(index / trafficVehicleCount))
+        }
         road.forEach((segment: RoadSegment) => {
             const roadModel = models.road.find((model) => segment.name === model.name)
             if (!roadModel) throw new Error(`Missing road model: ${segment.name}`)
@@ -284,24 +299,29 @@ function animate(timestamp = performance.now()): void {
             controls.target.add(movement)
         }
         previousAmbulancePosition = ambulance.position.clone()
-
-        if (iter === 30) {
-            toggleBeaconLights(ambulanceBeaconLights)
-            toggleBeaconLights(trafficBeaconLights)
-            iter = 0
-        }
-        iter++
     }
 
-    if (trafficVehicle && trafficRoadPath) {
-        const progressDelta = (2 * deltaTime) / trafficRoadPath.getLength()
-        trafficVehicleProgress += progressDelta
-        if (trafficVehicleProgress >= 1) spawnTrafficVehicle()
+    if (iter === 30) {
+        toggleBeaconLights(ambulanceBeaconLights)
+        for (const trafficVehicle of trafficVehicles) {
+            toggleBeaconLights(trafficVehicle.beaconLights)
+        }
+        iter = 0
+    }
+    iter++
 
-        const trafficPose = getLanePosition(trafficRoadPath, trafficVehicleProgress, 0.16)
-        trafficVehicle.position.copy(trafficPose.position)
-        trafficVehicle.position.y += 0.02
-        trafficVehicle.rotation.y = Math.atan2(-trafficPose.tangent.x, -trafficPose.tangent.z)
+    if (trafficRoadPath && trafficVehicles.length > 0) {
+        const path = trafficRoadPath
+        const progressDelta = (2 * deltaTime) / path.getLength()
+        for (const trafficVehicle of trafficVehicles) {
+            trafficVehicle.progress += progressDelta
+            if (trafficVehicle.progress >= 1) respawnTrafficVehicle(trafficVehicle)
+
+            const trafficPose = getLanePosition(path, trafficVehicle.progress, 0.16)
+            trafficVehicle.object.position.copy(trafficPose.position)
+            trafficVehicle.object.position.y += 0.02
+            trafficVehicle.object.rotation.y = Math.atan2(-trafficPose.tangent.x, -trafficPose.tangent.z)
+        }
     }
 
     controls.update()
