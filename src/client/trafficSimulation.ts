@@ -24,6 +24,7 @@ export type TrafficSimulationOptions = {
     reverseTrafficVehicleCount: number
     forwardTrafficVehicleCount: number
     createVehicle: VehicleFactory
+    random?: () => number
 }
 
 export type TrafficSimulation = {
@@ -55,9 +56,27 @@ function toggleBeacons(lights: PointLight[]): void {
     }
 }
 
+function shuffled<T>(items: readonly T[], random: () => number): T[] {
+    const result = [...items]
+    for (let index = result.length - 1; index > 0; index--) {
+        const swapIndex = Math.floor(random() * (index + 1))
+        const current = result[index]
+        result[index] = result[swapIndex]
+        result[swapIndex] = current
+    }
+    return result
+}
+
 export function createTrafficSimulation(options: TrafficSimulationOptions): TrafficSimulation {
-    const { scene, laneOffset, isShowcase, reverseTrafficVehicleCount, forwardTrafficVehicleCount, createVehicle } =
-        options
+    const {
+        scene,
+        laneOffset,
+        isShowcase,
+        reverseTrafficVehicleCount,
+        forwardTrafficVehicleCount,
+        createVehicle,
+        random = Math.random
+    } = options
 
     let ambulance: Group | undefined
     let ambulanceBeaconLights: PointLight[] = []
@@ -65,7 +84,7 @@ export function createTrafficSimulation(options: TrafficSimulationOptions): Traf
     let centerPath: RoadPath | undefined
     let reversePath: RoadPath | undefined
     let vehicleModels: LoadedTrafficVehicleModel[] = []
-    let lastModelName: string | undefined
+    let modelDeck: LoadedTrafficVehicleModel[] = []
     let ambulanceProgress = 0
     let ambulanceReturning = false
     let ambulanceTurnProgress: number | undefined
@@ -73,15 +92,16 @@ export function createTrafficSimulation(options: TrafficSimulationOptions): Traf
 
     const trafficVehicles: TrafficVehicle[] = []
 
-    function spawnVehicle(path: RoadPath, progress: number): TrafficVehicle {
-        const differentModels = vehicleModels.filter((model) => model.name !== lastModelName)
-        const candidates = differentModels.length > 0 ? differentModels : vehicleModels
-        const model = candidates[Math.floor(Math.random() * candidates.length)]
+    function nextModel(): LoadedTrafficVehicleModel {
+        if (modelDeck.length === 0) modelDeck = shuffled(vehicleModels, random)
+        const model = modelDeck.pop()
         if (!model) throw new Error('No traffic vehicle models available')
+        return model
+    }
 
-        const vehicle = createVehicle(model)
+    function spawnVehicle(path: RoadPath, progress: number): TrafficVehicle {
+        const vehicle = createVehicle(nextModel())
         scene.add(vehicle.object)
-        lastModelName = model.name
         return { ...vehicle, path, progress }
     }
 

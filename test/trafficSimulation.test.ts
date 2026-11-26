@@ -147,6 +147,44 @@ describe('traffic simulation', () => {
         assert.strictEqual(after, before)
     })
 
+    it('deals distinct models from a shuffled deck', () => {
+        const names = ['ambulance', 'police', 'sedan', 'taxi', 'van']
+        const spawned: string[] = []
+        const { simulation } = createSetup({
+            reverseTrafficVehicleCount: 3,
+            forwardTrafficVehicleCount: 2,
+            random: () => 0.5,
+            createVehicle: (model) => {
+                spawned.push(model.name)
+                return { object: new Group(), beaconLights: [] }
+            }
+        })
+
+        simulation.start(straightPath(), straightPath(10, 0), names.map(vehicleModel))
+
+        assert.strictEqual(spawned.length, 5)
+        assert.deepStrictEqual([...spawned].sort(), names)
+    })
+
+    it('reshuffles the deck when there are more vehicles than models', () => {
+        const names = ['sedan', 'taxi']
+        const spawned: string[] = []
+        const { simulation } = createSetup({
+            reverseTrafficVehicleCount: 2,
+            forwardTrafficVehicleCount: 2,
+            random: () => 0.5,
+            createVehicle: (model) => {
+                spawned.push(model.name)
+                return { object: new Group(), beaconLights: [] }
+            }
+        })
+
+        simulation.start(straightPath(), straightPath(10, 0), names.map(vehicleModel))
+
+        assert.deepStrictEqual(spawned.slice(0, 2).sort(), names)
+        assert.deepStrictEqual(spawned.slice(2).sort(), names)
+    })
+
     it('reuses the same vehicle objects when they reach the end of their path', () => {
         const { scene, created, simulation } = createSetup()
         simulation.start(straightPath(), straightPath(10, 0), [vehicleModel('car')])
