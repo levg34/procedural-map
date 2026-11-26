@@ -24,7 +24,8 @@ import {
 import { createRoadCenterPath, getLanePosition } from './vehiclePath'
 
 const isShowcase = window.location.pathname === '/showcase'
-const trafficVehicleCount = isShowcase ? 1 : 8
+const reverseTrafficVehicleCount = isShowcase ? 1 : 8
+const forwardTrafficVehicleCount = isShowcase ? 0 : 4
 
 type LoadedRoadModel = RoadModel & {
     model: GLTF
@@ -36,6 +37,7 @@ type LoadedTrafficVehicleModel = TrafficVehicleModel & {
 
 type TrafficVehicle = {
     object: Group
+    path: ReturnType<typeof createRoadCenterPath>
     progress: number
     beaconLights: PointLight[]
 }
@@ -133,7 +135,6 @@ let trafficVehicleModels: LoadedTrafficVehicleModel[] = []
 const trafficVehicles: TrafficVehicle[] = []
 let lastTrafficVehicleModelName: string | undefined
 let roadCenterPath: ReturnType<typeof createRoadCenterPath> | undefined
-let trafficRoadPath: ReturnType<typeof createRoadCenterPath> | undefined
 let ambulanceProgress = 0
 
 async function initializeAmbulance(): Promise<void> {
@@ -177,7 +178,7 @@ function toggleBeaconLights(lights: PointLight[]): void {
     })
 }
 
-function createTrafficVehicle(progress: number): TrafficVehicle {
+function createTrafficVehicle(path: ReturnType<typeof createRoadCenterPath>, progress: number): TrafficVehicle {
     const differentModels = trafficVehicleModels.filter((model) => model.name !== lastTrafficVehicleModelName)
     const candidates = differentModels.length > 0 ? differentModels : trafficVehicleModels
     const model = candidates[Math.floor(Math.random() * candidates.length)]
@@ -190,12 +191,12 @@ function createTrafficVehicle(progress: number): TrafficVehicle {
     scene.add(vehicle)
     lastTrafficVehicleModelName = model.name
 
-    return { object: vehicle, progress, beaconLights }
+    return { object: vehicle, path, progress, beaconLights }
 }
 
 function respawnTrafficVehicle(trafficVehicle: TrafficVehicle): void {
     scene.remove(trafficVehicle.object)
-    const replacement = createTrafficVehicle(0)
+    const replacement = createTrafficVehicle(trafficVehicle.path, 0)
     trafficVehicle.object = replacement.object
     trafficVehicle.progress = replacement.progress
     trafficVehicle.beaconLights = replacement.beaconLights
@@ -251,9 +252,13 @@ async function initializeRoad(): Promise<void> {
         models.index = 0
 
         roadCenterPath = createRoadCenterPath(road)
-        trafficRoadPath = createRoadCenterPath(road, true)
-        for (let index = 0; index < trafficVehicleCount; index++) {
-            trafficVehicles.push(createTrafficVehicle(index / trafficVehicleCount))
+        const reverseRoadPath = createRoadCenterPath(road, true)
+        for (let index = 0; index < reverseTrafficVehicleCount; index++) {
+            trafficVehicles.push(createTrafficVehicle(reverseRoadPath, index / reverseTrafficVehicleCount))
+        }
+        // Keep progress 0 on the forward path clear for the ambulance.
+        for (let index = 0; index < forwardTrafficVehicleCount; index++) {
+            trafficVehicles.push(createTrafficVehicle(roadCenterPath, (index + 1) / (forwardTrafficVehicleCount + 1)))
         }
         road.forEach((segment: RoadSegment) => {
             const roadModel = models.road.find((model) => segment.name === model.name)
@@ -310,10 +315,10 @@ function animate(timestamp = performance.now()): void {
     }
     iter++
 
-    if (trafficRoadPath && trafficVehicles.length > 0) {
-        const path = trafficRoadPath
-        const progressDelta = (2 * deltaTime) / path.getLength()
+    if (trafficVehicles.length > 0) {
         for (const trafficVehicle of trafficVehicles) {
+            const path = trafficVehicle.path
+            const progressDelta = (2 * deltaTime) / path.getLength()
             trafficVehicle.progress += progressDelta
             if (trafficVehicle.progress >= 1) respawnTrafficVehicle(trafficVehicle)
 
