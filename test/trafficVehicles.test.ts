@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'vitest'
-import { isTrafficVehicleExcluded, isVehiclePart, trafficVehicleExclusions } from '../data/vehicles'
-import { getTrafficVehicleModels } from '../utils'
+import { isTrafficVehicleExcluded, isVehiclePart, trafficVehicleExclusions } from '../src/data/vehicles'
+import { getTrafficVehicleModels } from '../src/server/utils'
 
 describe('traffic vehicle models', () => {
     it('should include vehicle models but exclude parts and configured vehicles', async () => {

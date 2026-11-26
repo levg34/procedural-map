@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'vitest'
-import { Road } from '../classes'
-import { streetLightHeads } from '../data/lights'
-import { createShowcasePlacements, isShowcaseProp } from '../src/showcase'
-import { getAllVehicleModels } from '../utils'
+import { createShowcasePlacements, isShowcaseProp } from '../src/client/showcase'
+import { streetLightHeads } from '../src/data/lights'
+import { Road } from '../src/server/classes'
+import { getAllVehicleModels } from '../src/server/utils'
 
 describe('showcase props', () => {
     it('should treat every non-road GLB as a showcase prop', async () => {

@@ -1,6 +1,6 @@
 import { Vector3 } from 'three'
-import type { RoadPartMetadata } from './data/models'
-import { roadTypes, type RoadFootprint } from './data/road'
+import type { RoadPartMetadata } from '../data/models'
+import { roadTypes, type RoadFootprint } from '../data/road'
 import { getRoadParts } from './utils'
 
 type RoadPartType = RoadPartMetadata & {

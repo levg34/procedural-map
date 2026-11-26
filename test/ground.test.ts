@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'vitest'
-import type { RoadSegment } from '../data/models'
-import { getGroundBounds } from '../src/ground'
+import type { RoadSegment } from '../src/data/models'
+import { getGroundBounds } from '../src/client/ground'
 
 function segment(x: number, z: number): RoadSegment {
     return {

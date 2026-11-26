@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict'
 import { CurvePath, LineCurve3, Vector3 } from 'three'
 import { describe, it } from 'vitest'
-import { Road } from '../classes'
-import { createRoadsideLampPlacements } from '../src/streetLamps'
-import { createRoadCenterPath } from '../src/vehiclePath'
+import { createRoadsideLampPlacements } from '../src/client/streetLamps'
+import { createRoadCenterPath } from '../src/client/vehiclePath'
+import { Road } from '../src/server/classes'
 
 describe('roadside street lamps', () => {
     it('places lamps on both sides of the generated road with arms facing it', async () => {
