@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { CurvePath, Vector3 } from 'three'
 import { beforeAll, describe, it } from 'vitest'
-import { Road } from '../src/server/classes'
+import { Road } from '../src/server/roadBuilder'
 import { roadTypes } from '../src/data/road'
 import { createRoadCenterPath, getLanePosition, getTurnaroundPose } from '../src/client/vehiclePath'
 import { getRoadParts } from '../src/server/utils'

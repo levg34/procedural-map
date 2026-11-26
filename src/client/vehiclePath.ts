@@ -1,6 +1,8 @@
 import { CubicBezierCurve3, CurvePath, LineCurve3, Vector3 } from 'three'
 import type { RoadSegment, RoadVector } from '../data/models'
 
+export type RoadPath = CurvePath<Vector3>
+
 function getConnector(segment: RoadSegment, direction: RoadVector): Vector3 {
     const index = segment.directions.findIndex(
         (candidate) =>
@@ -18,11 +20,7 @@ function getRouteDirections(segment: RoadSegment, reverse: boolean): RoadVector[
     return reverse ? [...segment.usedDirections].reverse() : segment.usedDirections
 }
 
-function createRoundaboutPath(
-    segment: RoadSegment,
-    entryDirection: RoadVector,
-    exitDirection: RoadVector
-): CurvePath<Vector3> {
+function createRoundaboutPath(segment: RoadSegment, entryDirection: RoadVector, exitDirection: RoadVector): RoadPath {
     // The vehicle's 0.16 right-lane offset puts it at radius 0.8 on the asphalt.
     const radius = 0.64
     const center = new Vector3(segment.position.x, segment.position.y, segment.position.z)
@@ -90,7 +88,7 @@ function createRoundaboutPath(
     return curve
 }
 
-export function createRoadCenterPath(segments: RoadSegment[], reverse = false): CurvePath<Vector3> {
+export function createRoadCenterPath(segments: RoadSegment[], reverse = false): RoadPath {
     const connectedSegments = segments.filter((segment) => segment.usedDirections.length > 0)
     if (reverse) connectedSegments.reverse()
     if (connectedSegments.length < 2) throw new Error('A road path requires at least two connected segments')
@@ -158,7 +156,7 @@ export function createRoadCenterPath(segments: RoadSegment[], reverse = false): 
 }
 
 export function getLanePosition(
-    centerPath: CurvePath<Vector3>,
+    centerPath: RoadPath,
     progress: number,
     laneOffset: number,
     reverse = false
@@ -177,7 +175,7 @@ export function getLanePosition(
 }
 
 export function getTurnaroundPose(
-    centerPath: CurvePath<Vector3>,
+    centerPath: RoadPath,
     progress: number,
     laneOffset: number
 ): { position: Vector3; tangent: Vector3 } {
