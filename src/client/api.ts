@@ -1,6 +1,7 @@
 import type { RoadModel, RoadSegment, TrafficVehicleModel } from '../data/models'
 
-async function getJson<T>(url: string): Promise<T> {
+async function getJson<T>(path: string): Promise<T> {
+    const url = `/api${path}`
     const response = await fetch(url)
     if (!response.ok) {
         throw new Error(`Request failed (${response.status}): ${url}`)

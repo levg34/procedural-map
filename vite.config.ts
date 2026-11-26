@@ -1,5 +1,7 @@
 import { defineConfig } from 'vite'
 
+const backend = 'http://localhost:3210'
+
 export default defineConfig({
     build: {
         outDir: 'public'
@@ -7,10 +9,8 @@ export default defineConfig({
     publicDir: false,
     server: {
         proxy: {
-            '/road': 'http://localhost:3210',
-            '/model': 'http://localhost:3210',
-            '/traffic_vehicles': 'http://localhost:3210',
-            '/vehicles': 'http://localhost:3210'
+            '/api': backend,
+            '/model': backend
         }
     }
 })

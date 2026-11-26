@@ -5,6 +5,7 @@ import { Road } from './classes'
 import { getAllVehicleModels, getRoadParts, getTrafficVehicleModels } from './utils'
 
 const app = express()
+const api = express.Router()
 const rootDirectory = join(dirname(fileURLToPath(import.meta.url)), '..', '..')
 const port = 3210
 
@@ -14,7 +15,7 @@ app.get(['/', '/showcase'], (_req, res) => {
     res.sendFile(join(rootDirectory, 'public', 'index.html'))
 })
 
-app.get('/road/showcase', async (_req, res) => {
+api.get('/road/showcase', async (_req, res) => {
     try {
         const road = await Road.buildShowcase()
         res.json(road.getPath())
@@ -24,7 +25,7 @@ app.get('/road/showcase', async (_req, res) => {
     }
 })
 
-app.get('/road/:length', async (req, res) => {
+api.get('/road/:length', async (req, res) => {
     const length = Number(req.params.length)
     if (!Number.isInteger(length) || length < 2) {
         res.status(400).json({ error: 'Road length must be an integer of at least 2' })
@@ -40,7 +41,7 @@ app.get('/road/:length', async (req, res) => {
     }
 })
 
-app.get('/road_parts', async (_req, res) => {
+api.get('/road_parts', async (_req, res) => {
     try {
         res.json(await getRoadParts())
     } catch (error) {
@@ -49,7 +50,7 @@ app.get('/road_parts', async (_req, res) => {
     }
 })
 
-app.get('/traffic_vehicles', async (_req, res) => {
+api.get('/traffic_vehicles', async (_req, res) => {
     try {
         res.json(await getTrafficVehicleModels())
     } catch (error) {
@@ -58,7 +59,7 @@ app.get('/traffic_vehicles', async (_req, res) => {
     }
 })
 
-app.get('/vehicles', async (_req, res) => {
+api.get('/vehicles', async (_req, res) => {
     try {
         res.json(await getAllVehicleModels())
     } catch (error) {
@@ -89,6 +90,8 @@ app.get('/model/:type/:model', (req, res, next) => {
         }
     )
 })
+
+app.use('/api', api)
 
 app.listen(port, () => {
     console.log(`App listening at http://localhost:${port}`)

@@ -23,8 +23,8 @@ cast warm light pools. On `/showcase`, press
 translation while `OrbitControls` stays active for orbiting and zooming;
 **WASD** move, **R/F** lower/raise, mouse drag orbits, and the wheel zooms.
 Press **C** again to resume following. Vite serves the browser app and
-proxies API/model requests to Express on port 3210. Press **Space** to preview
-road models.
+proxies `/api/*` and `/model/*` requests to Express on port 3210. Press **Space**
+to preview road models.
 
 For a production build and server, run `npm start` and open
 `http://localhost:3210` or `http://localhost:3210/showcase`.
