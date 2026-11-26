@@ -129,18 +129,37 @@ describe('traffic simulation', () => {
         assert.strictEqual(parkedBeacon.visible, false)
     })
 
-    it('respawns vehicles that reach the end of their path and removes the old object', () => {
+    it('keeps the scene light count constant across respawns', () => {
+        const { scene, simulation } = createSetup()
+        simulation.start(straightPath(), straightPath(10, 0), [vehicleModel('car')])
+
+        let before = 0
+        scene.traverse((object) => {
+            if (object instanceof PointLight) before++
+        })
+
+        simulation.update(3)
+
+        let after = 0
+        scene.traverse((object) => {
+            if (object instanceof PointLight) after++
+        })
+        assert.strictEqual(after, before)
+    })
+
+    it('reuses the same vehicle objects when they reach the end of their path', () => {
         const { scene, created, simulation } = createSetup()
         simulation.start(straightPath(), straightPath(10, 0), [vehicleModel('car')])
-        const original = created[0]
-        assert.ok(original)
 
         // The vehicles start at progress 0.5; this update pushes them past 1.
         simulation.update(3)
 
         assert.strictEqual(scene.children.length, 2)
-        assert.strictEqual(created.length, 4)
-        assert.ok(!scene.children.includes(original))
-        assert.ok(doubleEquals(created.at(-1)?.position.z ?? -1, 0))
+        assert.strictEqual(created.length, 2)
+        // Both restarted at progress 0: the reverse path starts at z=10.
+        assert.deepStrictEqual(
+            created.map((vehicle) => vehicle.position.z).sort((a, b) => a - b),
+            [0, 10]
+        )
     })
 })

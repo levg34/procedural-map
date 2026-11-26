@@ -32,6 +32,21 @@ That would remove camera state from `main.ts` and make it directly testable.
 `roadPreview.ts` controller would keep the catalog immutable and make wraparound
 explicit.
 
+### Model variety on respawn
+
+`respawnVehicle()` now reuses the same vehicle object so the scene's light counts
+stay constant — changing them invalidates every shader program and freezes the
+page. The cost is that each lane keeps its startup model.
+
+A safe way to restore variety later is to swap only the visual GLB clone between
+models with the **same light signature** (same number of visible point lights and
+spotlights), leaving the light objects untouched. Most traffic models share the
+same signature (2 spotlights, no beacons); `police` and `ambulance`/`firetruck`
+are separate groups, as are `race`/`raceFuture`. Group models by `(point, spot)`
+counts and pick replacements from the same group. Never use `visible = false` for
+unused lights — that removes them from the renderer's count and reintroduces the
+freeze; use `intensity = 0` instead.
+
 ### Time-based beacon blinking
 
 `trafficSimulation.ts` still blinks beacons on a frame counter, so the blink rate

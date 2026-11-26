@@ -86,11 +86,9 @@ export function createTrafficSimulation(options: TrafficSimulationOptions): Traf
     }
 
     function respawnVehicle(vehicle: TrafficVehicle): void {
-        scene.remove(vehicle.object)
-        const replacement = spawnVehicle(vehicle.path, 0)
-        vehicle.object = replacement.object
-        vehicle.progress = replacement.progress
-        vehicle.beaconLights = replacement.beaconLights
+        // Reuse the same object and lights: adding/removing lights changes the
+        // shader program cache key and freezes the page on recompilation.
+        vehicle.progress = 0
     }
 
     function updateAmbulance(deltaTime: number): void {
