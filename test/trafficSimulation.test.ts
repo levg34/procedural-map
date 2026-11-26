@@ -208,6 +208,54 @@ describe('traffic simulation', () => {
         assert.deepStrictEqual(spawned.slice(2).sort(), names)
     })
 
+    it('keeps traffic vehicles clear of each other over many laps', () => {
+        const minimumGap = 1
+        const created: Group[] = []
+        const { simulation } = createSetup({
+            reverseTrafficVehicleCount: 3,
+            forwardTrafficVehicleCount: 2,
+            minimumGap,
+            createVehicle: () => {
+                const object = new Group()
+                created.push(object)
+                return { object, beaconLights: [] }
+            }
+        })
+        simulation.start(straightPath(), straightPath(10, 0), [vehicleModel('car')])
+
+        let closest = Infinity
+        for (let step = 0; step < 60 * 120; step++) {
+            simulation.update(1 / 60)
+            for (let first = 0; first < created.length; first++) {
+                for (let second = first + 1; second < created.length; second++) {
+                    if (Math.sign(created[first].position.x) !== Math.sign(created[second].position.x)) continue
+                    closest = Math.min(closest, Math.abs(created[first].position.z - created[second].position.z))
+                }
+            }
+        }
+
+        assert.ok(closest >= minimumGap - 0.05, `closest traffic-to-traffic gap was ${closest}`)
+    })
+
+    it('keeps vehicles on the path even when it is too short for the gap', () => {
+        const created: Group[] = []
+        const { simulation } = createSetup({
+            reverseTrafficVehicleCount: 8,
+            forwardTrafficVehicleCount: 4,
+            minimumGap: 1,
+            createVehicle: () => {
+                const object = new Group()
+                created.push(object)
+                return { object, beaconLights: [] }
+            }
+        })
+        simulation.start(straightPath(0, 2), straightPath(2, 0), [vehicleModel('car')])
+
+        for (let step = 0; step < 60 * 10; step++) simulation.update(1 / 60)
+
+        assert.ok(created.every((object) => object.position.z >= 0 && object.position.z <= 2))
+    })
+
     it('keeps the ambulance clear of traffic over many laps', () => {
         const minimumGap = 1
         const created: Group[] = []

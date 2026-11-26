@@ -87,25 +87,26 @@ function weightedDeck<T>(items: readonly T[], weight: (item: T) => number, rando
     return deck
 }
 
-/** Progress to place a vehicle entering at the start of a path. A vehicle that
- * would land within `minimumGap` of another is nudged just ahead of it; moving
- * past one vehicle can bring us too close to the next, hence the repeat. */
-function clearStartProgress(path: RoadPath, occupied: number[], minimumGap: number): number {
+/** Progress at which a vehicle is clear of the others on its path. A vehicle
+ * that would land within `minimumGap` of another is nudged just ahead of it;
+ * moving past one vehicle can bring us too close to the next, hence the repeat. */
+function clearProgress(path: RoadPath, progress: number, occupied: number[], minimumGap: number): number {
     const gapProgress = minimumGap / path.getLength()
-    let candidate = 0
+    let candidate = progress
 
     for (let pass = 0; pass < occupied.length; pass++) {
         let moved = false
-        for (const progress of occupied) {
-            if (Math.abs(progress - candidate) < gapProgress) {
-                candidate = progress + gapProgress
+        for (const other of occupied) {
+            if (Math.abs(other - candidate) < gapProgress) {
+                candidate = other + gapProgress
                 moved = true
             }
         }
         if (!moved) break
     }
 
-    return candidate
+    // A path too short to fit every vehicle must not push one past the end.
+    return Math.min(candidate, 1)
 }
 
 export function createTrafficSimulation(options: TrafficSimulationOptions): TrafficSimulation {
@@ -169,8 +170,9 @@ export function createTrafficSimulation(options: TrafficSimulationOptions): Traf
     function respawnVehicle(vehicle: TrafficVehicle): void {
         // Reuse the same object and lights: adding/removing lights changes the
         // shader program cache key and freezes the page on recompilation.
-        vehicle.progress = clearStartProgress(
+        vehicle.progress = clearProgress(
             vehicle.path,
+            0,
             [...trafficOnPath(vehicle.path, vehicle), ...ambulanceBlockers(vehicle.path)],
             minimumGap
         )
@@ -201,7 +203,7 @@ export function createTrafficSimulation(options: TrafficSimulationOptions): Traf
                 ambulanceTurnProgress = undefined
                 ambulanceReturning = !ambulanceReturning
                 const nextPath = ambulanceLane()
-                ambulanceProgress = nextPath ? clearStartProgress(nextPath, trafficOnPath(nextPath), minimumGap) : 0
+                ambulanceProgress = nextPath ? clearProgress(nextPath, 0, trafficOnPath(nextPath), minimumGap) : 0
             }
         }
 
@@ -246,10 +248,16 @@ export function createTrafficSimulation(options: TrafficSimulationOptions): Traf
 
             // Keep progress 0 on both paths clear for the ambulance.
             for (let index = 0; index < reverseTrafficVehicleCount; index++) {
-                trafficVehicles.push(spawnVehicle(reverse, (index + 1) / (reverseTrafficVehicleCount + 1)))
+                const progress = (index + 1) / (reverseTrafficVehicleCount + 1)
+                trafficVehicles.push(
+                    spawnVehicle(reverse, clearProgress(reverse, progress, trafficOnPath(reverse), minimumGap))
+                )
             }
             for (let index = 0; index < forwardTrafficVehicleCount; index++) {
-                trafficVehicles.push(spawnVehicle(center, (index + 1) / (forwardTrafficVehicleCount + 1)))
+                const progress = (index + 1) / (forwardTrafficVehicleCount + 1)
+                trafficVehicles.push(
+                    spawnVehicle(center, clearProgress(center, progress, trafficOnPath(center), minimumGap))
+                )
             }
         },
         update(deltaTime: number): void {
