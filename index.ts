@@ -2,7 +2,7 @@ import express from 'express'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { Road } from './classes'
-import { getRoadParts, getTrafficVehicleModels } from './utils'
+import { getAllVehicleModels, getRoadParts, getTrafficVehicleModels } from './utils'
 
 const app = express()
 const rootDirectory = dirname(fileURLToPath(import.meta.url))
@@ -52,6 +52,15 @@ app.get('/road_parts', async (_req, res) => {
 app.get('/traffic_vehicles', async (_req, res) => {
     try {
         res.json(await getTrafficVehicleModels())
+    } catch (error) {
+        console.error(error)
+        res.status(500).json({ error: error instanceof Error ? error.message : String(error) })
+    }
+})
+
+app.get('/vehicles', async (_req, res) => {
+    try {
+        res.json(await getAllVehicleModels())
     } catch (error) {
         console.error(error)
         res.status(500).json({ error: error instanceof Error ? error.message : String(error) })

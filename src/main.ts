@@ -1,6 +1,8 @@
 import {
     AmbientLight,
     DirectionalLight,
+    Mesh,
+    MeshStandardMaterial,
     Object3D,
     PerspectiveCamera,
     PointLight,
@@ -12,16 +14,18 @@ import {
 } from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { GLTFLoader, type GLTF } from 'three/addons/loaders/GLTFLoader.js'
+import { isTrafficVehicleExcluded } from '../trafficVehicleData'
 import {
     getRoad,
     getRoadParts,
     getRoadShowcase,
-    getTrafficVehicleModels,
+    getVehicleModels,
     type RoadModel,
     type RoadSegment,
     type TrafficVehicleModel
 } from './data'
 import { createGrassGround } from './ground'
+import { createShowcasePlacements, isShowcaseProp, streetLightHeads } from './showcase'
 import { createRoadCenterPath, getLanePosition, getTurnaroundPose } from './vehiclePath'
 
 const isShowcase = window.location.pathname === '/showcase'
@@ -134,6 +138,7 @@ const loadModel = (url: string): Promise<GLTF> => {
 
 let ambulance: Group | undefined
 let ambulanceBeaconLights: PointLight[] = []
+let parkedBeaconLights: PointLight[] = []
 let trafficVehicleModels: LoadedTrafficVehicleModel[] = []
 const trafficVehicles: TrafficVehicle[] = []
 let lastTrafficVehicleModelName: string | undefined
@@ -181,6 +186,68 @@ function addBeaconLights(vehicle: Group, placements: BeaconLightPlacement[]): Po
 function toggleBeaconLights(lights: PointLight[]): void {
     lights.forEach((light) => {
         light.visible = !light.visible
+    })
+}
+
+function addStreetLightGlow(prop: Group, name: string): void {
+    prop.traverse((child) => {
+        if (!(child instanceof Mesh)) return
+
+        const materials = Array.isArray(child.material) ? child.material : [child.material]
+        for (const material of materials) {
+            if (!(material instanceof MeshStandardMaterial) || material.name !== 'light') continue
+            material.emissive.set(0xffe6b0)
+            material.emissiveIntensity = 1.6
+        }
+    })
+
+    for (const head of streetLightHeads[name] ?? []) {
+        const light = new PointLight(0xffe0a8, 2.5, 1.8, 2)
+        // Head coordinates are centered; the GLB root is offset by -0.75.
+        light.position.set(head.x, head.y, head.z + 0.75)
+        prop.add(light)
+    }
+}
+
+function addShowcaseProps(road: RoadSegment[]): void {
+    const propModels = models.road.filter((model) => isShowcaseProp(model.name))
+    const placements = createShowcasePlacements(road, propModels.length, {
+        offset: 3.4,
+        rotation: { left: Math.PI / 2, right: -Math.PI / 2 }
+    })
+
+    propModels.forEach((model, index) => {
+        const placement = placements[index]
+        if (!placement) return
+
+        // The GLB node pushes geometry 0.75 forward; center it on the placement.
+        const prop = model.model.scene.clone()
+        prop.position.z = -0.75
+        addStreetLightGlow(prop, model.name)
+
+        const holder = new Object3D()
+        holder.add(prop)
+        holder.position.copy(placement.position)
+        holder.rotation.y = placement.rotation
+        scene.add(holder)
+    })
+}
+
+function addParkedVehicles(road: RoadSegment[], vehicleModels: LoadedTrafficVehicleModel[]): void {
+    const placements = createShowcasePlacements(road, vehicleModels.length, { offset: 1.7, rotation: 0 })
+
+    vehicleModels.forEach((model, index) => {
+        const placement = placements[index]
+        if (!placement) return
+
+        const vehicle = model.model.scene.clone()
+        vehicle.scale.set(0.2, 0.2, 0.2)
+        addHeadlights(vehicle, headlightPlacements[model.name] ?? defaultHeadlightPlacement)
+        parkedBeaconLights.push(...addBeaconLights(vehicle, emergencyBeaconPlacements[model.name] ?? []))
+        vehicle.position.copy(placement.position)
+        vehicle.position.y += 0.02
+        vehicle.rotation.y = placement.rotation
+        scene.add(vehicle)
     })
 }
 
@@ -234,12 +301,12 @@ function loadRoadPreview(): void {
 
 async function initializeRoad(): Promise<void> {
     try {
-        const [roadModels, availableTrafficModels, road] = await Promise.all([
+        const [roadModels, availableVehicleModels, road] = await Promise.all([
             getRoadParts(),
-            getTrafficVehicleModels(),
+            getVehicleModels(),
             isShowcase ? getRoadShowcase() : getRoad(10)
         ])
-        const [loadedRoadModels, loadedTrafficModels] = await Promise.all([
+        const [loadedRoadModels, loadedVehicleModels] = await Promise.all([
             Promise.all(
                 roadModels.map(async (roadModel) => ({
                     ...roadModel,
@@ -247,19 +314,23 @@ async function initializeRoad(): Promise<void> {
                 }))
             ),
             Promise.all(
-                availableTrafficModels.map(async (vehicleModel) => ({
+                availableVehicleModels.map(async (vehicleModel) => ({
                     ...vehicleModel,
                     model: await loadModel(vehicleModel.url)
                 }))
             )
         ])
         models.road = loadedRoadModels
-        trafficVehicleModels = loadedTrafficModels
+        trafficVehicleModels = loadedVehicleModels.filter((model) => !isTrafficVehicleExcluded(model.name))
         models.index = 0
 
         scene.add(createGrassGround(road))
         roadCenterPath = createRoadCenterPath(road)
         reverseRoadPath = createRoadCenterPath(road, true)
+        if (isShowcase) {
+            addShowcaseProps(road)
+            addParkedVehicles(road, loadedVehicleModels)
+        }
         // Keep progress 0 on both paths clear for the ambulance.
         for (let index = 0; index < reverseTrafficVehicleCount; index++) {
             trafficVehicles.push(createTrafficVehicle(reverseRoadPath, (index + 1) / (reverseTrafficVehicleCount + 1)))
@@ -337,6 +408,7 @@ function animate(timestamp = performance.now()): void {
 
     if (iter === 30) {
         toggleBeaconLights(ambulanceBeaconLights)
+        toggleBeaconLights(parkedBeaconLights)
         for (const trafficVehicle of trafficVehicles) {
             toggleBeaconLights(trafficVehicle.beaconLights)
         }

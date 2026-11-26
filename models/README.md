@@ -111,6 +111,12 @@ separately. All traffic vehicles have headlights.
 Ambulances, firetrucks, police cars, and police tractors also have animated
 emergency lights.
 
+The showcase additionally parks one of every car model in dedicated lanes beside
+the road, including the models excluded from traffic, with headlights and
+emergency lights on. Display props get their own lanes farther out, so neither
+group overlaps the road or each other. The moving ambulance and the single
+opposite-direction traffic vehicle are unchanged.
+
 ## Procedural-generation coverage
 
 The road preview loads all GLBs in `models/road`. The connected showcase uses
@@ -118,9 +124,13 @@ the subset with connection metadata in [`roadData.ts`](../roadData.ts).
 The plain `road_side` piece has a wider asphalt mouth than standard road tiles.
 The showcase connects it between `road_sideEntry` and `road_sideExit`, which
 provide the width transitions on either side.
-Barrier, bridge, slant, tile, and roadside-prop models are available to preview
-but are not currently placed by the procedural road generator. The split/fork
-pieces are also left out until branch-aware placement is supported.
+Every non-`road_` model is placed once in the showcase as a display prop: bridge
+pillars, construction props, street lights, and ground tiles. Barrier, slant,
+and split/fork models start with `road_` and are only available in the Space-key
+preview; the procedural road generator does not connect them.
+Street-light and construction-light lamp materials glow and cast warm point
+lights in the showcase; lamp-head positions live in
+[`src/showcase.ts`](../src/showcase.ts).
 
 ## Asset source and license
 

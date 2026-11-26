@@ -44,7 +44,7 @@ export async function getRoadParts(): Promise<RoadPartMetadata[]> {
         })
 }
 
-export async function getTrafficVehicleModels(): Promise<ModelMetadata[]> {
+async function readVehicleModels(): Promise<ModelMetadata[]> {
     const files = await readdir(carModelDirectory)
 
     return files
@@ -53,5 +53,13 @@ export async function getTrafficVehicleModels(): Promise<ModelMetadata[]> {
             url: `/model/cars/${file}`,
             name: file.slice(0, -4)
         }))
-        .filter((model) => !isVehiclePart(model.name) && !isTrafficVehicleExcluded(model.name))
+        .filter((model) => !isVehiclePart(model.name))
+}
+
+export async function getAllVehicleModels(): Promise<ModelMetadata[]> {
+    return readVehicleModels()
+}
+
+export async function getTrafficVehicleModels(): Promise<ModelMetadata[]> {
+    return (await readVehicleModels()).filter((model) => !isTrafficVehicleExcluded(model.name))
 }

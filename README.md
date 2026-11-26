@@ -12,9 +12,13 @@ npm run dev
 ```
 
 Open `http://localhost:5173` for a generated road or
-`http://localhost:5173/showcase` for the debugging showcase. Vite serves the
-browser app and proxies API/model requests to Express on port 3210. Press
-**Space** to preview road models.
+`http://localhost:5173/showcase` for the debugging showcase. The showcase lays
+out one of every non-road model (street lights, construction props, bridge
+pillars, and tiles) and parks every vehicle with its headlights on in separate
+lanes beside the road, alongside the moving ambulance and one opposite-direction
+vehicle. Street lights glow and cast warm light pools. Vite serves the browser app and proxies
+API/model requests to Express on port 3210. Press **Space** to preview road
+models.
 
 For a production build and server, run `npm start` and open
 `http://localhost:3210` or `http://localhost:3210/showcase`.
@@ -32,6 +36,7 @@ npm run build        # Type-check and create the production client bundle
 - `index.ts` — Express API and production static-file server.
 - `classes.ts`, `roadData.ts`, `utils.ts` — road generation, connection directions, and model metadata.
 - `src/main.ts`, `src/data.ts` — Three.js scene and browser API calls.
+- `src/showcase.ts` — showcase prop selection, lamp positions, and display placement.
 - `test/` — road-generation tests.
 
 ## Browser debugging helpers
