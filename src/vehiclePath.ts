@@ -1,21 +1,7 @@
 import { CubicBezierCurve3, CurvePath, LineCurve3, Vector3 } from 'three'
+import type { RoadSegment, RoadVector } from '../data/models'
 
-export type RoadVector = {
-    x: number
-    y: number
-    z: number
-}
-
-export type RoadPathSegment = {
-    name: string
-    position: RoadVector
-    rotation?: number
-    directions: RoadVector[]
-    usedDirections: RoadVector[]
-    connectionOffsets: RoadVector[]
-}
-
-function getConnector(segment: RoadPathSegment, direction: RoadVector): Vector3 {
+function getConnector(segment: RoadSegment, direction: RoadVector): Vector3 {
     const index = segment.directions.findIndex(
         (candidate) =>
             Math.abs(candidate.x - direction.x) < 0.000001 &&
@@ -28,12 +14,12 @@ function getConnector(segment: RoadPathSegment, direction: RoadVector): Vector3 
     return new Vector3(segment.position.x + offset.x, segment.position.y + offset.y, segment.position.z + offset.z)
 }
 
-function getRouteDirections(segment: RoadPathSegment, reverse: boolean): RoadVector[] {
+function getRouteDirections(segment: RoadSegment, reverse: boolean): RoadVector[] {
     return reverse ? [...segment.usedDirections].reverse() : segment.usedDirections
 }
 
 function createRoundaboutPath(
-    segment: RoadPathSegment,
+    segment: RoadSegment,
     entryDirection: RoadVector,
     exitDirection: RoadVector
 ): CurvePath<Vector3> {
@@ -104,7 +90,7 @@ function createRoundaboutPath(
     return curve
 }
 
-export function createRoadCenterPath(segments: RoadPathSegment[], reverse = false): CurvePath<Vector3> {
+export function createRoadCenterPath(segments: RoadSegment[], reverse = false): CurvePath<Vector3> {
     const connectedSegments = segments.filter((segment) => segment.usedDirections.length > 0)
     if (reverse) connectedSegments.reverse()
     if (connectedSegments.length < 2) throw new Error('A road path requires at least two connected segments')

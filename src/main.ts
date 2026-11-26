@@ -15,18 +15,20 @@ import {
 import { FlyControls } from 'three/addons/controls/FlyControls.js'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { GLTFLoader, type GLTF } from 'three/addons/loaders/GLTFLoader.js'
-import { isTrafficVehicleExcluded } from '../trafficVehicleData'
 import {
-    getRoad,
-    getRoadParts,
-    getRoadShowcase,
-    getVehicleModels,
-    type RoadModel,
-    type RoadSegment,
-    type TrafficVehicleModel
-} from './data'
+    ambulanceBeaconPlacements,
+    defaultHeadlightPlacement,
+    emergencyBeaconPlacements,
+    headlightPlacements,
+    streetLightHeads,
+    type BeaconLightPlacement,
+    type HeadlightPlacement
+} from '../data/lights'
+import type { RoadModel, RoadSegment, TrafficVehicleModel } from '../data/models'
+import { isTrafficVehicleExcluded } from '../data/vehicles'
+import { getRoad, getRoadParts, getRoadShowcase, getVehicleModels } from './api'
 import { createGrassGround } from './ground'
-import { createShowcasePlacements, isShowcaseProp, streetLightHeads } from './showcase'
+import { createShowcasePlacements, isShowcaseProp } from './showcase'
 import { createRoadsideLampPlacements } from './streetLamps'
 import { enableHeadlightGlow, enableTailLightGlow, hasHeadlights } from './vehicleLights'
 import { createRoadCenterPath, getLanePosition, getTurnaroundPose } from './vehiclePath'
@@ -49,58 +51,6 @@ type TrafficVehicle = {
     path: ReturnType<typeof createRoadCenterPath>
     progress: number
     beaconLights: PointLight[]
-}
-
-type HeadlightPlacement = {
-    halfWidth: number
-    height: number
-    frontZ: number
-}
-
-type BeaconLightPlacement = {
-    x: number
-    y: number
-    z: number
-    color: number
-    initiallyVisible: boolean
-}
-
-const headlightPlacements: Record<string, HeadlightPlacement> = {
-    ambulance: { halfWidth: 0.42, height: 0.65, frontZ: -1.55 },
-    firetruck: { halfWidth: 0.35, height: 0.84, frontZ: -1.43 },
-    police: { halfWidth: 0.45, height: 0.55, frontZ: -1.32 },
-    tractorPolice: { halfWidth: 0.445, height: 0.62, frontZ: -0.91 }
-}
-
-const defaultHeadlightPlacement: HeadlightPlacement = {
-    halfWidth: 0.45,
-    height: 0.35,
-    frontZ: -1.35
-}
-
-const ambulanceBeaconPlacements: BeaconLightPlacement[] = [
-    { x: -0.31, y: 1.73, z: 1.45, color: 0x0e45ea, initiallyVisible: true },
-    { x: 0.31, y: 1.73, z: 1.45, color: 0x0e45ea, initiallyVisible: false },
-    { x: -0.31, y: 1.43, z: -0.75, color: 0x0e45ea, initiallyVisible: true },
-    { x: 0.31, y: 1.43, z: -0.75, color: 0x0e45ea, initiallyVisible: false }
-]
-
-const emergencyBeaconPlacements: Record<string, BeaconLightPlacement[]> = {
-    ambulance: ambulanceBeaconPlacements,
-    firetruck: [
-        { x: -0.28, y: 1.63, z: -1.21, color: 0x0e45ea, initiallyVisible: true },
-        { x: 0.28, y: 1.63, z: -1.21, color: 0x0e45ea, initiallyVisible: false },
-        { x: -0.28, y: 1.73, z: 1.5, color: 0x0e45ea, initiallyVisible: true },
-        { x: 0.28, y: 1.73, z: 1.5, color: 0x0e45ea, initiallyVisible: false }
-    ],
-    police: [
-        { x: -0.245, y: 1.33, z: -0.15, color: 0xff3030, initiallyVisible: true },
-        { x: 0.245, y: 1.33, z: -0.15, color: 0x0e45ea, initiallyVisible: false }
-    ],
-    tractorPolice: [
-        { x: -0.225, y: 1.59, z: 0.16, color: 0xff3030, initiallyVisible: true },
-        { x: 0.225, y: 1.59, z: 0.16, color: 0x0e45ea, initiallyVisible: false }
-    ]
 }
 
 const models: {

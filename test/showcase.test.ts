@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'vitest'
 import { Road } from '../classes'
-import { createShowcasePlacements, isShowcaseProp, streetLightHeads } from '../src/showcase'
+import { streetLightHeads } from '../data/lights'
+import { createShowcasePlacements, isShowcaseProp } from '../src/showcase'
 import { getAllVehicleModels } from '../utils'
 
 describe('showcase props', () => {

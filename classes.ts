@@ -1,8 +1,7 @@
 import { Vector3 } from 'three'
+import type { RoadPartMetadata } from './data/models'
+import { roadTypes, type RoadFootprint } from './data/road'
 import { getRoadParts } from './utils'
-import type { RoadPartMetadata } from './utils'
-import { roadTypes } from './roadData'
-import type { RoadFootprint } from './roadData'
 
 type RoadPartType = RoadPartMetadata & {
     rotation?: number

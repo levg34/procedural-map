@@ -9,7 +9,8 @@ export default defineConfig({
         proxy: {
             '/road': 'http://localhost:3210',
             '/model': 'http://localhost:3210',
-            '/traffic_vehicles': 'http://localhost:3210'
+            '/traffic_vehicles': 'http://localhost:3210',
+            '/vehicles': 'http://localhost:3210'
         }
     }
 })
