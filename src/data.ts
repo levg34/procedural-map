@@ -21,4 +21,6 @@ async function getJson<T>(url: string): Promise<T> {
 export const getRoadParts = (): Promise<RoadModel[]> => getJson('/road_parts')
 export const getRoad = (length: number): Promise<RoadSegment[]> => getJson(`/road/${length}`)
 export const getRoadShowcase = (): Promise<RoadSegment[]> => getJson('/road/showcase')
+export const getRoadCircuit = (shape?: string): Promise<RoadSegment[]> =>
+    getJson(shape ? `/road/circuit?shape=${encodeURIComponent(shape)}` : '/road/circuit')
 export const getTrafficVehicleModels = (): Promise<TrafficVehicleModel[]> => getJson('/traffic_vehicles')

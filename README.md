@@ -11,13 +11,24 @@ npm ci
 npm run dev
 ```
 
-Open `http://localhost:5173` for a generated road or
-`http://localhost:5173/showcase` for the debugging showcase. Vite serves the
-browser app and proxies API/model requests to Express on port 3210. Press
-**Space** to preview road models.
+Open `http://localhost:5173` for a generated road,
+`http://localhost:5173/showcase` for the debugging showcase, or
+`http://localhost:5173/circuit` for a prototype closed circuit built around a
+roundabout. Vite serves the browser app and proxies API/model requests to
+Express on port 3210. Press **Space** to preview road models.
 
 For a production build and server, run `npm start` and open
-`http://localhost:3210` or `http://localhost:3210/showcase`.
+`http://localhost:3210`, `http://localhost:3210/showcase`, or
+`http://localhost:3210/circuit`.
+
+### Circuit prototype
+
+The circuit mode serves `GET /road/circuit` (optionally `?shape=dumbbell`). Its
+prearranged shapes are defined in `circuitData.ts` as an ordered list of tile
+visits with explicit entry/exit ports. A junction such as the roundabout or
+crossroad appears twice in the route so every connector is used; there are no
+dangling connectors and the route closes back on itself. Two lanes of traffic
+and the ambulance loop around the circuit continuously.
 
 ## Checks
 

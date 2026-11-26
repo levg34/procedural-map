@@ -3,6 +3,15 @@ import { getRoadParts } from './utils'
 import type { RoadPartMetadata } from './utils'
 import { roadTypes } from './roadData'
 import type { RoadFootprint } from './roadData'
+import { circuitShapes, defaultCircuitShape } from './circuitData'
+import type { Compass } from './circuitData'
+
+const compassVectors: Record<Compass, Vector3> = {
+    E: new Vector3(1, 0, 0),
+    W: new Vector3(-1, 0, 0),
+    N: new Vector3(0, 0, 1),
+    S: new Vector3(0, 0, -1)
+}
 
 type RoadPartType = RoadPartMetadata & {
     rotation?: number
@@ -173,11 +182,18 @@ class Road {
         return new Road(parts, { showcase: true })
     }
 
-    constructor(parts: RoadPartMetadata[], options: { length: number } | { showcase: true }) {
+    static async buildCircuit(shapeName = defaultCircuitShape): Promise<Road> {
+        const parts = await getRoadParts()
+        return new Road(parts, { circuit: shapeName })
+    }
+
+    constructor(parts: RoadPartMetadata[], options: { length: number } | { showcase: true } | { circuit: string }) {
         this.parts = parts.map((part) => new RoadPart(part))
         this.path = []
         if ('showcase' in options) {
             this.createShowcasePath()
+        } else if ('circuit' in options) {
+            this.createCircuitPath(options.circuit)
         } else {
             this.createPath(options.length, 5)
         }
@@ -241,6 +257,88 @@ class Road {
 
             if (!branch) throw new Error('No free intersection branch available for road_square')
             this.path.push(new LinkedRoadPart(noEntry, branch.position))
+        }
+    }
+
+    private findDirection(part: RoadPart, target: Vector3): Vector3 {
+        const direction = part.directions.find((candidate) => candidate.distanceToSquared(target) < 0.000001)
+        if (!direction) throw new Error(`Road part ${part.name} has no connector facing ${target.toArray()}`)
+        return direction
+    }
+
+    private orient(part: RoadPart, entry: Vector3, exit: Vector3): void {
+        for (let rotation = 0; rotation < 4; rotation++) {
+            const hasEntry = part.directions.some((direction) => direction.distanceToSquared(entry) < 0.000001)
+            const hasExit = part.directions.some((direction) => direction.distanceToSquared(exit) < 0.000001)
+            if (hasEntry && hasExit) return
+            part.rotate(Math.PI / 2)
+        }
+        throw new Error(`Road part ${part.name} cannot face ${entry.toArray()} and ${exit.toArray()}`)
+    }
+
+    createCircuitPath(shapeName: string): void {
+        const shape = circuitShapes[shapeName]
+        if (!shape) throw new Error(`Unknown circuit shape: ${shapeName}`)
+
+        this.path = []
+        const placed = new Map<string, LinkedRoadPart>()
+        let previous: { tile: LinkedRoadPart; direction: Vector3 } | undefined
+
+        for (const current of shape.steps) {
+            const template = this.getRoadPartByName(current.name)
+            if (!template) throw new Error(`Required road part not found: ${current.name}`)
+
+            const entryTarget = compassVectors[current.entry]
+            const exitTarget = compassVectors[current.exit]
+            let tile = placed.get(current.id)
+
+            if (!tile) {
+                tile = new LinkedRoadPart(template)
+                this.orient(tile, entryTarget, exitTarget)
+                if (previous) {
+                    const entry = this.findDirection(tile, previous.direction.clone().negate())
+                    const position = previous.tile.position
+                        .clone()
+                        .add(previous.tile.getConnectionOffset(previous.direction))
+                        .sub(tile.getConnectionOffset(entry))
+                    tile.translate(position)
+                }
+                placed.set(current.id, tile)
+            } else {
+                this.orient(tile, entryTarget, exitTarget)
+            }
+
+            const entry = this.findDirection(tile, entryTarget)
+            const exit = this.findDirection(tile, exitTarget)
+
+            if (previous) {
+                const expected = previous.tile.position
+                    .clone()
+                    .add(previous.tile.getConnectionOffset(previous.direction))
+                const actual = tile.position.clone().add(tile.getConnectionOffset(entry))
+                if (expected.distanceTo(actual) > 0.000001) {
+                    throw new Error(`Circuit shape ${shapeName} does not connect ${current.id} to its predecessor`)
+                }
+            }
+
+            tile.usedDirections.push(entry, exit)
+            this.path.push(new LinkedRoadPart(tile, tile.position, [entry, exit]))
+            previous = { tile, direction: exit }
+        }
+
+        const first = this.path[0]
+        const last = this.path[this.path.length - 1]
+        if (!first || !last) throw new Error(`Circuit shape ${shapeName} is empty`)
+        const firstEntry = first.usedDirections[0]
+        const lastExit = last.usedDirections[1]
+        if (!firstEntry || !lastExit || firstEntry.clone().add(lastExit).length() > 0.000001) {
+            throw new Error(`Circuit shape ${shapeName} is not closed`)
+        }
+
+        for (const tile of placed.values()) {
+            if (tile.getAvailableDirections().length > 0) {
+                throw new Error(`Circuit shape ${shapeName} leaves connectors open on ${tile.name}`)
+            }
         }
     }
 

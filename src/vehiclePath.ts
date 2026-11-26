@@ -35,7 +35,8 @@ function getRouteDirections(segment: RoadPathSegment, reverse: boolean): RoadVec
 function createRoundaboutPath(
     segment: RoadPathSegment,
     entryDirection: RoadVector,
-    exitDirection: RoadVector
+    exitDirection: RoadVector,
+    trim: number
 ): CurvePath<Vector3> {
     // The vehicle's 0.16 right-lane offset puts it at radius 0.8 on the asphalt.
     const radius = 0.64
@@ -44,8 +45,8 @@ function createRoundaboutPath(
     const exitRadial = new Vector3(exitDirection.x, 0, exitDirection.z).normalize()
     const entryAngle = Math.atan2(-entryRadial.z, entryRadial.x)
     const exitAngle = Math.atan2(-exitRadial.z, exitRadial.x)
-    const circleStartAngle = entryAngle + Math.PI / 4
-    const circleEndAngle = exitAngle - Math.PI / 4
+    const circleStartAngle = entryAngle + trim
+    const circleEndAngle = exitAngle - trim
     const sweep = (circleEndAngle - circleStartAngle + 2 * Math.PI) % (2 * Math.PI)
     if (sweep < 0.000001) throw new Error('Roundabout route requires distinct entry and exit ports')
 
@@ -104,10 +105,56 @@ function createRoundaboutPath(
     return curve
 }
 
-export function createRoadCenterPath(segments: RoadPathSegment[], reverse = false): CurvePath<Vector3> {
+function addSegmentCurve(
+    curve: CurvePath<Vector3>,
+    segment: RoadPathSegment,
+    entryDirection: RoadVector,
+    exitDirection: RoadVector,
+    useRoundaboutPath: boolean,
+    trim = Math.PI / 4
+): void {
+    if (useRoundaboutPath && segment.name === 'road_roundabout') {
+        curve.add(createRoundaboutPath(segment, entryDirection, exitDirection, trim))
+        return
+    }
+
+    const start = getConnector(segment, entryDirection)
+    const end = getConnector(segment, exitDirection)
+    const startTangent = new Vector3(-entryDirection.x, -entryDirection.y, -entryDirection.z)
+    const endTangent = new Vector3(exitDirection.x, exitDirection.y, exitDirection.z)
+    const controlDistance = start.distanceTo(end) * 0.39052429175127
+
+    curve.add(
+        new CubicBezierCurve3(
+            start,
+            start.clone().addScaledVector(startTangent, controlDistance),
+            end.clone().addScaledVector(endTangent, -controlDistance),
+            end
+        )
+    )
+}
+
+export function createRoadCenterPath(segments: RoadPathSegment[], reverse = false, closed = false): CurvePath<Vector3> {
     const connectedSegments = segments.filter((segment) => segment.usedDirections.length > 0)
     if (reverse) connectedSegments.reverse()
     if (connectedSegments.length < 2) throw new Error('A road path requires at least two connected segments')
+
+    const curve = new CurvePath<Vector3>()
+
+    if (closed) {
+        for (const [index, segment] of connectedSegments.entries()) {
+            const directions = getRouteDirections(segment, reverse)
+            const entryDirection = directions[0]
+            const exitDirection = directions[1]
+            if (!entryDirection || !exitDirection) {
+                throw new Error(`Road segment ${segment.name} at ${index} is missing a route connector`)
+            }
+            // Closed circuits enter and leave a roundabout at right angles;
+            // a smaller trim keeps the circular arc from collapsing to zero.
+            addSegmentCurve(curve, segment, entryDirection, exitDirection, true, Math.PI / 8)
+        }
+        return curve
+    }
 
     const first = connectedSegments[0]
     const last = connectedSegments[connectedSegments.length - 1]
@@ -119,7 +166,6 @@ export function createRoadCenterPath(segments: RoadPathSegment[], reverse = fals
     const lastDirection = lastDirections[0]
     if (!firstDirection || !lastDirection) throw new Error('Road endpoint is missing its connector direction')
 
-    const curve = new CurvePath<Vector3>()
     const firstConnector = getConnector(first, firstDirection)
     curve.add(
         new LineCurve3(
@@ -139,25 +185,7 @@ export function createRoadCenterPath(segments: RoadPathSegment[], reverse = fals
             throw new Error(`Road segment ${segment?.name ?? index} is missing a route connector`)
         }
 
-        if (reverse && segment.name === 'road_roundabout') {
-            curve.add(createRoundaboutPath(segment, entryDirection, exitDirection))
-            continue
-        }
-
-        const start = getConnector(segment, entryDirection)
-        const end = getConnector(segment, exitDirection)
-        const startTangent = new Vector3(-entryDirection.x, -entryDirection.y, -entryDirection.z)
-        const endTangent = new Vector3(exitDirection.x, exitDirection.y, exitDirection.z)
-        const controlDistance = start.distanceTo(end) * 0.39052429175127
-
-        curve.add(
-            new CubicBezierCurve3(
-                start,
-                start.clone().addScaledVector(startTangent, controlDistance),
-                end.clone().addScaledVector(endTangent, -controlDistance),
-                end
-            )
-        )
+        addSegmentCurve(curve, segment, entryDirection, exitDirection, reverse)
     }
 
     const lastConnector = getConnector(last, lastDirection)

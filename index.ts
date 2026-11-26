@@ -10,7 +10,7 @@ const port = 3210
 
 app.use(express.static(join(rootDirectory, 'public')))
 
-app.get(['/', '/showcase'], (_req, res) => {
+app.get(['/', '/showcase', '/circuit'], (_req, res) => {
     res.sendFile(join(rootDirectory, 'public', 'index.html'))
 })
 
@@ -21,6 +21,17 @@ app.get('/road/showcase', async (_req, res) => {
     } catch (error) {
         console.error(error)
         res.status(500).json({ error: error instanceof Error ? error.message : String(error) })
+    }
+})
+
+app.get('/road/circuit', async (req, res) => {
+    try {
+        const shape = typeof req.query.shape === 'string' ? req.query.shape : undefined
+        const road = await Road.buildCircuit(shape)
+        res.json(road.getPath())
+    } catch (error) {
+        console.error(error)
+        res.status(400).json({ error: error instanceof Error ? error.message : String(error) })
     }
 })
 

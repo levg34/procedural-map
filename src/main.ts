@@ -14,6 +14,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { GLTFLoader, type GLTF } from 'three/addons/loaders/GLTFLoader.js'
 import {
     getRoad,
+    getRoadCircuit,
     getRoadParts,
     getRoadShowcase,
     getTrafficVehicleModels,
@@ -25,8 +26,10 @@ import { createGrassGround } from './ground'
 import { createRoadCenterPath, getLanePosition, getTurnaroundPose } from './vehiclePath'
 
 const isShowcase = window.location.pathname === '/showcase'
-const reverseTrafficVehicleCount = isShowcase ? 1 : 8
-const forwardTrafficVehicleCount = isShowcase ? 0 : 4
+const isCircuit = window.location.pathname === '/circuit'
+const isLooping = isShowcase || isCircuit
+const reverseTrafficVehicleCount = isShowcase ? 1 : isCircuit ? 2 : 8
+const forwardTrafficVehicleCount = isShowcase ? 0 : isCircuit ? 2 : 4
 const laneOffset = 0.16
 
 type LoadedRoadModel = RoadModel & {
@@ -237,7 +240,7 @@ async function initializeRoad(): Promise<void> {
         const [roadModels, availableTrafficModels, road] = await Promise.all([
             getRoadParts(),
             getTrafficVehicleModels(),
-            isShowcase ? getRoadShowcase() : getRoad(10)
+            isShowcase ? getRoadShowcase() : isCircuit ? getRoadCircuit() : getRoad(10)
         ])
         const [loadedRoadModels, loadedTrafficModels] = await Promise.all([
             Promise.all(
@@ -258,8 +261,8 @@ async function initializeRoad(): Promise<void> {
         models.index = 0
 
         scene.add(createGrassGround(road))
-        roadCenterPath = createRoadCenterPath(road)
-        reverseRoadPath = createRoadCenterPath(road, true)
+        roadCenterPath = createRoadCenterPath(road, false, isCircuit)
+        reverseRoadPath = createRoadCenterPath(road, true, isCircuit)
         // Keep progress 0 on both paths clear for the ambulance.
         for (let index = 0; index < reverseTrafficVehicleCount; index++) {
             trafficVehicles.push(createTrafficVehicle(reverseRoadPath, (index + 1) / (reverseTrafficVehicleCount + 1)))
@@ -267,7 +270,12 @@ async function initializeRoad(): Promise<void> {
         for (let index = 0; index < forwardTrafficVehicleCount; index++) {
             trafficVehicles.push(createTrafficVehicle(roadCenterPath, (index + 1) / (forwardTrafficVehicleCount + 1)))
         }
+        const rendered = new Set<string>()
         road.forEach((segment: RoadSegment) => {
+            const renderKey = `${segment.name}:${segment.position.x},${segment.position.z}`
+            if (rendered.has(renderKey)) return
+            rendered.add(renderKey)
+
             const roadModel = models.road.find((model) => segment.name === model.name)
             if (!roadModel) throw new Error(`Missing road model: ${segment.name}`)
 
@@ -298,14 +306,14 @@ function animate(timestamp = performance.now()): void {
     lastFrameTime = timestamp
 
     if (ambulance && roadCenterPath && reverseRoadPath) {
-        const path = !isShowcase && ambulanceReturning ? reverseRoadPath : roadCenterPath
+        const path = !isLooping && ambulanceReturning ? reverseRoadPath : roadCenterPath
         let ambulancePose: { position: Vector3; tangent: Vector3 }
 
         if (ambulanceTurnProgress === undefined) {
             const progressDelta = (2 * deltaTime) / path.getLength()
             ambulanceProgress += progressDelta
             if (ambulanceProgress >= 1) {
-                if (isShowcase) {
+                if (isLooping) {
                     ambulanceProgress %= 1
                 } else {
                     ambulanceProgress = 1
