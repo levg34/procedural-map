@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict'
 import { Vector3 } from 'three'
 import { beforeAll, describe, it, vi } from 'vitest'
-import { LinkedRoadPart, RoadPart } from '../classes'
-import { getRoadParts } from '../utils'
+import { LinkedRoadPart, RoadPart } from '../src/server/classes'
+import { getRoadParts } from '../src/server/utils'
 import { doubleEquals, vectors3Equals } from './testUtils'
 
 describe('RoadPart', function () {

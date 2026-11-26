@@ -5,7 +5,7 @@ import { Road } from './classes'
 import { getAllVehicleModels, getRoadParts, getTrafficVehicleModels } from './utils'
 
 const app = express()
-const rootDirectory = dirname(fileURLToPath(import.meta.url))
+const rootDirectory = join(dirname(fileURLToPath(import.meta.url)), '..', '..')
 const port = 3210
 
 app.use(express.static(join(rootDirectory, 'public')))

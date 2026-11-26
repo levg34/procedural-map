@@ -3,7 +3,7 @@ import { readdirSync, readFileSync } from 'node:fs'
 import { BoxGeometry, Group, Mesh, MeshStandardMaterial } from 'three'
 import { GLTFLoader, type GLTF } from 'three/addons/loaders/GLTFLoader.js'
 import { describe, it } from 'vitest'
-import { enableHeadlightGlow, enableTailLightGlow, hasHeadlights, hasTailLights } from '../src/vehicleLights'
+import { enableHeadlightGlow, enableTailLightGlow, hasHeadlights, hasTailLights } from '../src/client/vehicleLights'
 
 async function loadVehicle(name: string): Promise<Group> {
     const data = readFileSync(`models/cars/${name}.glb`)

@@ -1,10 +1,10 @@
 import assert from 'node:assert/strict'
 import { CurvePath, Vector3 } from 'three'
 import { beforeAll, describe, it } from 'vitest'
-import { Road } from '../classes'
-import { roadTypes } from '../data/road'
-import { createRoadCenterPath, getLanePosition, getTurnaroundPose } from '../src/vehiclePath'
-import { getRoadParts } from '../utils'
+import { Road } from '../src/server/classes'
+import { roadTypes } from '../src/data/road'
+import { createRoadCenterPath, getLanePosition, getTurnaroundPose } from '../src/client/vehiclePath'
+import { getRoadParts } from '../src/server/utils'
 import { doubleEquals, vectors3Equals } from './testUtils'
 
 describe('Road', () => {

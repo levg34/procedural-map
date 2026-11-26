@@ -39,17 +39,14 @@ npm run build        # Type-check and create the production client bundle
 
 ## Code map
 
-- `data/` — shared config and types: road rules, vehicle exclusions, model metadata, and lighting placements.
-- `index.ts` — Express API and production static-file server.
-- `classes.ts`, `utils.ts` — road generation and filesystem-backed model metadata.
-- `src/main.ts`, `src/api.ts` — Three.js scene and browser API calls.
-- `src/showcase.ts` — showcase prop selection and display placement.
-- `src/streetLamps.ts`, `src/vehicleLights.ts` — generated-route lamp placement and vehicle light detection.
-- `test/` — road-generation tests.
+- `src/client/` — browser code: `main.ts` (Three.js scene), `api.ts` (browser API calls), and placement/light helpers.
+- `src/server/` — Express API, road generation, and filesystem-backed model metadata.
+- `src/data/` — shared config and types: road rules, vehicle exclusions, model metadata, and lighting placements. Importable from both client and server.
+- `test/` — road-generation, metadata, and client-helper tests.
 
 ## Browser debugging helpers
 
-The browser renderer is in `src/main.ts`. Optional Three.js helpers and light-position controls can be added there when debugging; they are not enabled by default.
+The browser renderer is in `src/client/main.ts`. Optional Three.js helpers and light-position controls can be added there when debugging; they are not enabled by default.
 
 To enable the grid and axes, add this after creating `scene`:
 
@@ -64,7 +61,7 @@ To tune the ambulance lights interactively, install [lil-gui](https://www.npmjs.
 npm install --save-dev lil-gui
 ```
 
-Import `GUI` at the top of `src/main.ts`, then add the controls inside `initializeAmbulance()`, after creating `headLight` and `headLight2`:
+Import `GUI` at the top of `src/client/main.ts`, then add the controls inside `initializeAmbulance()`, after creating `headLight` and `headLight2`:
 
 ```ts
 import { GUI } from 'lil-gui'
