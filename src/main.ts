@@ -78,6 +78,7 @@ const ambulanceBeaconPlacements: BeaconLightPlacement[] = [
 ]
 
 const emergencyBeaconPlacements: Record<string, BeaconLightPlacement[]> = {
+    ambulance: ambulanceBeaconPlacements,
     firetruck: [
         { x: -0.28, y: 1.63, z: -1.21, color: 0x0e45ea, initiallyVisible: true },
         { x: 0.28, y: 1.63, z: -1.21, color: 0x0e45ea, initiallyVisible: false },

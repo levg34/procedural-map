@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url'
 import type { Vector3 } from 'three'
 import { roadConnectionOffsets, roadFootprints, roadTypes } from './roadData'
 import type { RoadFootprint } from './roadData'
+import { isTrafficVehicleExcluded, isVehiclePart } from './trafficVehicleData'
 
 export type ModelMetadata = {
     url: string
@@ -47,9 +48,10 @@ export async function getTrafficVehicleModels(): Promise<ModelMetadata[]> {
     const files = await readdir(carModelDirectory)
 
     return files
-        .filter((file) => file.endsWith('.glb') && !file.startsWith('wheel') && file !== 'ambulance.glb')
+        .filter((file) => file.endsWith('.glb'))
         .map((file) => ({
             url: `/model/cars/${file}`,
             name: file.slice(0, -4)
         }))
+        .filter((model) => !isVehiclePart(model.name) && !isTrafficVehicleExcluded(model.name))
 }
