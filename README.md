@@ -39,11 +39,12 @@ npm run build        # Type-check and create the production client bundle
 
 ## Code map
 
+- `data/` — shared config and types: road rules, vehicle exclusions, model metadata, and lighting placements.
 - `index.ts` — Express API and production static-file server.
-- `classes.ts`, `roadData.ts`, `utils.ts` — road generation, connection directions, and model metadata.
-- `src/main.ts`, `src/data.ts` — Three.js scene and browser API calls.
-- `src/showcase.ts` — showcase prop selection, lamp positions, and display placement.
-- `src/streetLamps.ts`, `src/vehicleLights.ts` — generated-route lamp placement and vehicle headlight detection.
+- `classes.ts`, `utils.ts` — road generation and filesystem-backed model metadata.
+- `src/main.ts`, `src/api.ts` — Three.js scene and browser API calls.
+- `src/showcase.ts` — showcase prop selection and display placement.
+- `src/streetLamps.ts`, `src/vehicleLights.ts` — generated-route lamp placement and vehicle light detection.
 - `test/` — road-generation tests.
 
 ## Browser debugging helpers

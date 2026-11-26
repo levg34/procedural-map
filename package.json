@@ -7,7 +7,7 @@
     "vitest": "vitest run",
     "typecheck": "tsc --noEmit",
     "typecheck:watch": "tsc --noEmit --watch",
-    "format:check": "prettier --check \"*.ts\" \"src/**/*.ts\" \"test/**/*.ts\" package.json tsconfig.json index.html .github/workflows/test.yml .prettierrc",
+    "format:check": "prettier --check \"*.ts\" \"data/**/*.ts\" \"src/**/*.ts\" \"test/**/*.ts\" package.json tsconfig.json index.html .github/workflows/test.yml .prettierrc",
     "test": "run-s typecheck vitest",
     "build": "run-s typecheck vite-build",
     "vite-build": "vite build",

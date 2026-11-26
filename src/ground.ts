@@ -1,5 +1,5 @@
 import { CanvasTexture, Mesh, MeshStandardMaterial, PlaneGeometry, RepeatWrapping, SRGBColorSpace } from 'three'
-import type { RoadSegment } from './data'
+import type { RoadSegment } from '../data/models'
 
 const groundMargin = 10
 const textureScale = 4

@@ -11,5 +11,5 @@
         "types": ["node"],
         "forceConsistentCasingInFileNames": true
     },
-    "include": ["classes.ts", "index.ts", "roadData.ts", "utils.ts", "src/**/*.ts", "test/**/*.ts", "vite.config.ts"]
+    "include": ["classes.ts", "index.ts", "utils.ts", "data/**/*.ts", "src/**/*.ts", "test/**/*.ts", "vite.config.ts"]
 }

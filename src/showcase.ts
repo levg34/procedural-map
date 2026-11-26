@@ -1,5 +1,5 @@
 import { Vector3 } from 'three'
-import type { RoadSegment } from './data'
+import type { RoadSegment } from '../data/models'
 
 export type ShowcasePlacement = {
     position: Vector3
@@ -18,28 +18,6 @@ export type ShowcaseLayout = {
 // street lights, construction gear, bridge pillars, and ground tiles.
 export function isShowcaseProp(name: string): boolean {
     return !name.startsWith('road_')
-}
-
-// Lamp-head centers in the centered model coordinate space (node Z offset removed).
-// Curved lamps sit at Y = 0.653, square ones at Y = 0.575.
-export const streetLightHeads: Record<string, Vector3[]> = {
-    light_curved: [new Vector3(0, 0.653, 0.15)],
-    light_curvedDouble: [new Vector3(0, 0.653, 0.15), new Vector3(0, 0.653, -0.15)],
-    light_curvedCross: [
-        new Vector3(0, 0.653, 0.15),
-        new Vector3(0, 0.653, -0.15),
-        new Vector3(0.15, 0.653, 0),
-        new Vector3(-0.15, 0.653, 0)
-    ],
-    light_square: [new Vector3(0, 0.575, 0.162)],
-    light_squareDouble: [new Vector3(0, 0.575, 0.162), new Vector3(0, 0.575, -0.162)],
-    light_squareCross: [
-        new Vector3(0, 0.575, 0.162),
-        new Vector3(0, 0.575, -0.162),
-        new Vector3(0.162, 0.575, 0),
-        new Vector3(-0.162, 0.575, 0)
-    ],
-    construction_light: [new Vector3(0, 0.21, 0)]
 }
 
 /**

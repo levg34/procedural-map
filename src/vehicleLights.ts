@@ -1,7 +1,5 @@
 import { Mesh, MeshStandardMaterial, type Group } from 'three'
-
-export const headlightMaterialName = 'lightFront'
-export const tailLightMaterialName = 'lightBack'
+import { headlightMaterialName, tailLightMaterialName } from '../data/lights'
 
 function getNamedMaterials(vehicle: Group, name: string): MeshStandardMaterial[] {
     const materials = new Set<MeshStandardMaterial>()

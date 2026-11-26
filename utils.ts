@@ -1,21 +1,9 @@
 import { readdir } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import type { Vector3 } from 'three'
-import { roadConnectionOffsets, roadFootprints, roadTypes } from './roadData'
-import type { RoadFootprint } from './roadData'
-import { isTrafficVehicleExcluded, isVehiclePart } from './trafficVehicleData'
-
-export type ModelMetadata = {
-    url: string
-    name: string
-}
-
-export type RoadPartMetadata = ModelMetadata & {
-    directions?: Vector3[]
-    footprint?: RoadFootprint
-    connectionOffsets?: Vector3[]
-}
+import type { ModelMetadata, RoadPartMetadata } from './data/models'
+import { roadConnectionOffsets, roadFootprints, roadTypes } from './data/road'
+import { isTrafficVehicleExcluded, isVehiclePart } from './data/vehicles'
 
 const modelDirectory = join(dirname(fileURLToPath(import.meta.url)), 'models', 'road')
 const carModelDirectory = join(dirname(fileURLToPath(import.meta.url)), 'models', 'cars')

@@ -1,13 +1,4 @@
-import type { RoadPathSegment } from './vehiclePath'
-
-export type RoadModel = {
-    url: string
-    name: string
-}
-
-export type TrafficVehicleModel = RoadModel
-
-export type RoadSegment = RoadPathSegment
+import type { RoadModel, RoadSegment, TrafficVehicleModel } from '../data/models'
 
 async function getJson<T>(url: string): Promise<T> {
     const response = await fetch(url)
