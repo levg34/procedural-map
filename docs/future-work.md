@@ -43,7 +43,8 @@ models with the **same light signature** (same number of visible point lights an
 spotlights), leaving the light objects untouched. Most traffic models share the
 same signature (2 spotlights, no beacons); `police` and `ambulance`/`firetruck`
 are separate groups, as are `race`/`raceFuture`. Group models by `(point, spot)`
-counts and pick replacements from the same group. Never use `visible = false` for
+counts, pick replacements from the same group, and apply the weights from
+`trafficVehicleWeights` within each group. Never use `visible = false` for
 unused lights — that removes them from the renderer's count and reintroduces the
 freeze; use `intensity = 0` instead.
 

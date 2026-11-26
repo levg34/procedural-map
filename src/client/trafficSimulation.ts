@@ -1,6 +1,7 @@
 import { Group, PointLight, Scene, Vector3 } from 'three'
 import type { GLTF } from 'three/addons/loaders/GLTFLoader.js'
 import type { TrafficVehicleModel } from '../data/models'
+import { getTrafficVehicleWeight } from '../data/vehicles'
 import { getLanePosition, getTurnaroundPose, type RoadPath } from './vehiclePath'
 
 const vehicleYOffset = 0.02
@@ -25,6 +26,7 @@ export type TrafficSimulationOptions = {
     forwardTrafficVehicleCount: number
     createVehicle: VehicleFactory
     random?: () => number
+    weight?: (model: LoadedTrafficVehicleModel) => number
 }
 
 export type TrafficSimulation = {
@@ -56,15 +58,31 @@ function toggleBeacons(lights: PointLight[]): void {
     }
 }
 
-function shuffled<T>(items: readonly T[], random: () => number): T[] {
-    const result = [...items]
-    for (let index = result.length - 1; index > 0; index--) {
-        const swapIndex = Math.floor(random() * (index + 1))
-        const current = result[index]
-        result[index] = result[swapIndex]
-        result[swapIndex] = current
+/** Weighted sampling without replacement: every pick is proportional to the
+ * remaining items' weights, and a model can never occupy two lanes. */
+function weightedDeck<T>(items: readonly T[], weight: (item: T) => number, random: () => number): T[] {
+    const remaining = items.map((item) => ({ item, weight: Math.max(0, weight(item)) }))
+    const deck: T[] = []
+
+    while (remaining.length > 0) {
+        const total = remaining.reduce((sum, entry) => sum + entry.weight, 0)
+        if (total <= 0) {
+            deck.push(...remaining.map((entry) => entry.item))
+            break
+        }
+
+        let pick = random() * total
+        let index = 0
+        while (index < remaining.length - 1 && pick >= remaining[index].weight) {
+            pick -= remaining[index].weight
+            index++
+        }
+
+        deck.push(remaining[index].item)
+        remaining.splice(index, 1)
     }
-    return result
+
+    return deck
 }
 
 export function createTrafficSimulation(options: TrafficSimulationOptions): TrafficSimulation {
@@ -75,7 +93,8 @@ export function createTrafficSimulation(options: TrafficSimulationOptions): Traf
         reverseTrafficVehicleCount,
         forwardTrafficVehicleCount,
         createVehicle,
-        random = Math.random
+        random = Math.random,
+        weight = (model) => getTrafficVehicleWeight(model.name)
     } = options
 
     let ambulance: Group | undefined
@@ -93,8 +112,8 @@ export function createTrafficSimulation(options: TrafficSimulationOptions): Traf
     const trafficVehicles: TrafficVehicle[] = []
 
     function nextModel(): LoadedTrafficVehicleModel {
-        if (modelDeck.length === 0) modelDeck = shuffled(vehicleModels, random)
-        const model = modelDeck.pop()
+        if (modelDeck.length === 0) modelDeck = weightedDeck(vehicleModels, weight, random)
+        const model = modelDeck.shift()
         if (!model) throw new Error('No traffic vehicle models available')
         return model
     }

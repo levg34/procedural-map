@@ -166,6 +166,29 @@ describe('traffic simulation', () => {
         assert.deepStrictEqual([...spawned].sort(), names)
     })
 
+    it('samples without replacement according to relative weights', () => {
+        const spawned: string[] = []
+        const { simulation } = createSetup({
+            reverseTrafficVehicleCount: 2,
+            forwardTrafficVehicleCount: 1,
+            random: () => 0.9,
+            weight: (model) => (model.name === 'race' ? 9 : 1),
+            createVehicle: (model) => {
+                spawned.push(model.name)
+                return { object: new Group(), beaconLights: [] }
+            }
+        })
+
+        simulation.start(straightPath(), straightPath(10, 0), [
+            vehicleModel('sedan'),
+            vehicleModel('race'),
+            vehicleModel('van')
+        ])
+
+        assert.strictEqual(spawned[0], 'race')
+        assert.deepStrictEqual([...spawned].sort(), ['race', 'sedan', 'van'])
+    })
+
     it('reshuffles the deck when there are more vehicles than models', () => {
         const names = ['sedan', 'taxi']
         const spawned: string[] = []
