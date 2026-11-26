@@ -107,15 +107,16 @@ are randomly selected when they reach the end of the road. The centralized
 [`trafficVehicleData.ts`](../trafficVehicleData.ts) config excludes exact models
 and type prefixes from the traffic pool (currently `tractorPolice` and the
 `tractor` family). Wheel assets are parts, not vehicles, so they are filtered
-separately. All traffic vehicles have headlights.
-Ambulances, firetrucks, police cars, and police tractors also have animated
-emergency lights.
+separately. Vehicles whose GLBs contain `lightFront` geometry get emissive
+headlights and headlight beams; `race` and `raceFuture` have no headlights and
+therefore project no beams. Ambulances, firetrucks, police cars, and police
+tractors also have animated emergency lights.
 
 The showcase additionally parks one of every car model in dedicated lanes beside
-the road, including the models excluded from traffic, with headlights and
-emergency lights on. Display props get their own lanes farther out, so neither
-group overlaps the road or each other. The moving ambulance and the single
-opposite-direction traffic vehicle are unchanged.
+the road, including the models excluded from traffic, with working headlights
+and emergency lights where the model provides them. Display props get their own
+lanes farther out, so neither group overlaps the road or each other. The moving
+ambulance and the single opposite-direction traffic vehicle are unchanged.
 
 ## Procedural-generation coverage
 

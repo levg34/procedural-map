@@ -15,9 +15,10 @@ Open `http://localhost:5173` for a generated road with glowing street lamps
 along both sides, or `http://localhost:5173/showcase` for the debugging
 showcase. The showcase lays
 out one of every non-road model (street lights, construction props, bridge
-pillars, and tiles) and parks every vehicle with its headlights on in separate
-lanes beside the road, alongside the moving ambulance and one opposite-direction
-vehicle. Street lights glow and cast warm light pools. On `/showcase`, press
+pillars, and tiles) and parks every vehicle in separate lanes beside the road,
+lighting the headlights of the models that have them alongside the moving
+ambulance and one opposite-direction vehicle. Street lights glow and cast warm
+light pools. On `/showcase`, press
 **C** to switch between following the ambulance and three.js `FlyControls`
 translation while `OrbitControls` stays active for orbiting and zooming;
 **WASD** move, **R/F** lower/raise, mouse drag orbits, and the wheel zooms.
@@ -42,6 +43,7 @@ npm run build        # Type-check and create the production client bundle
 - `classes.ts`, `roadData.ts`, `utils.ts` — road generation, connection directions, and model metadata.
 - `src/main.ts`, `src/data.ts` — Three.js scene and browser API calls.
 - `src/showcase.ts` — showcase prop selection, lamp positions, and display placement.
+- `src/streetLamps.ts`, `src/vehicleLights.ts` — generated-route lamp placement and vehicle headlight detection.
 - `test/` — road-generation tests.
 
 ## Browser debugging helpers

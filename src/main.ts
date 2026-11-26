@@ -28,6 +28,7 @@ import {
 import { createGrassGround } from './ground'
 import { createShowcasePlacements, isShowcaseProp, streetLightHeads } from './showcase'
 import { createRoadsideLampPlacements } from './streetLamps'
+import { enableHeadlightGlow, hasHeadlights } from './vehicleLights'
 import { createRoadCenterPath, getLanePosition, getTurnaroundPose } from './vehiclePath'
 
 const isShowcase = window.location.pathname === '/showcase'
@@ -215,6 +216,9 @@ async function initializeAmbulance(): Promise<void> {
 }
 
 function addHeadlights(vehicle: Group, placement: HeadlightPlacement = defaultHeadlightPlacement): void {
+    if (!hasHeadlights(vehicle)) return
+    enableHeadlightGlow(vehicle)
+
     for (const x of [-placement.halfWidth, placement.halfWidth]) {
         const target = new Object3D()
         target.position.set(x, placement.height - 0.1, -8)
