@@ -14,6 +14,7 @@ import {
 } from 'three'
 import { FlyControls } from 'three/addons/controls/FlyControls.js'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
+import { CSS2DObject, CSS2DRenderer } from 'three/addons/renderers/CSS2DRenderer.js'
 import { GLTFLoader, type GLTF } from 'three/addons/loaders/GLTFLoader.js'
 import {
     defaultHeadlightPlacement,
@@ -59,6 +60,16 @@ const renderer = new WebGLRenderer()
 renderer.setSize(window.innerWidth, window.innerHeight)
 document.body.appendChild(renderer.domElement)
 
+const labelRenderer = isShowcase ? new CSS2DRenderer() : undefined
+if (labelRenderer) {
+    labelRenderer.setSize(window.innerWidth, window.innerHeight)
+    labelRenderer.domElement.style.position = 'fixed'
+    labelRenderer.domElement.style.top = '0'
+    labelRenderer.domElement.style.left = '0'
+    labelRenderer.domElement.style.pointerEvents = 'none'
+    document.body.appendChild(labelRenderer.domElement)
+}
+
 const controls = new OrbitControls(camera, renderer.domElement)
 const flyControls = new FlyControls(camera, renderer.domElement)
 flyControls.movementSpeed = 0
@@ -102,12 +113,32 @@ const loadModel = (url: string): Promise<GLTF> => {
     })
 }
 
+function addModelLabel(name: string, position: Vector3): void {
+    if (!labelRenderer) return
+
+    const element = document.createElement('div')
+    element.className = 'model-label'
+    element.textContent = name
+
+    const label = new CSS2DObject(element)
+    label.position.copy(position).add(new Vector3(0, 0.35, 0))
+    label.center.set(0.5, 1)
+    scene.add(label)
+}
+
+let labelsVisible = true
+function toggleLabels(): void {
+    if (!labelRenderer) return
+    labelsVisible = !labelsVisible
+    labelRenderer.domElement.style.display = labelsVisible ? '' : 'none'
+}
+
 function updateCameraHint(hint: HTMLDivElement | undefined): void {
     if (!hint) return
     hint.textContent =
         cameraMode === 'follow'
-            ? 'Camera: following ambulance · C: free-fly'
-            : 'Camera: free-fly · WASD move · R/F up/down · drag orbit · wheel zoom · C: follow'
+            ? 'Camera: following ambulance · C: free-fly · L: labels'
+            : 'Camera: free-fly · WASD move · R/F up/down · drag orbit · wheel zoom · C: follow · L: labels'
 }
 
 function createCameraHint(): HTMLDivElement | undefined {
@@ -222,6 +253,7 @@ function addCenteredProp(model: LoadedRoadModel, position: Vector3, rotation: nu
     holder.position.copy(position)
     holder.rotation.y = rotation
     scene.add(holder)
+    addModelLabel(model.name, position)
 }
 
 function addShowcaseProps(road: RoadSegment[]): void {
@@ -265,6 +297,7 @@ function addParkedVehicles(road: RoadSegment[], vehicleModels: LoadedTrafficVehi
         vehicle.position.y += 0.02
         vehicle.rotation.y = placement.rotation
         scene.add(vehicle)
+        addModelLabel(model.name, placement.position)
     })
 
     return beaconLights
@@ -378,6 +411,7 @@ function animate(timestamp = performance.now()): void {
 
     controls.update()
     renderer.render(scene, camera)
+    labelRenderer?.render(scene, camera)
 }
 
 animate()
@@ -386,10 +420,12 @@ document.addEventListener('keydown', (event) => {
     const key = event.key.toLowerCase()
     if (key === ' ') loadRoadPreview()
     if (isShowcase && key === 'c' && !event.repeat) toggleCameraMode()
+    if (isShowcase && key === 'l' && !event.repeat) toggleLabels()
 })
 
 window.addEventListener('resize', () => {
     camera.aspect = window.innerWidth / window.innerHeight
     camera.updateProjectionMatrix()
     renderer.setSize(window.innerWidth, window.innerHeight)
+    labelRenderer?.setSize(window.innerWidth, window.innerHeight)
 })
