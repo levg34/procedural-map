@@ -14,7 +14,8 @@ const up = new Vector3(0, 1, 0)
 export function createRoadsideLampPlacements(
     path: CurvePath<Vector3>,
     spacing = 4,
-    offset = 1.1
+    offset = 1.1,
+    roundaboutCenters: Vector3[] = []
 ): StreetLampPlacement[] {
     const length = path.getLength()
     if (length < spacing) return []
@@ -28,8 +29,20 @@ export function createRoadsideLampPlacements(
         const tangent = path.getTangentAt(progress).normalize()
         const right = tangent.clone().cross(up).normalize()
 
+        const nearestRoundaboutCenter = roundaboutCenters
+            .map((center) => ({ center, distance: point.distanceTo(center) }))
+            .sort((a, b) => a.distance - b.distance)[0]
+
+        const isNearRoundabout = nearestRoundaboutCenter ? nearestRoundaboutCenter.distance < 2.0 : false
+
         for (const side of [-1, 1]) {
             const away = right.clone().multiplyScalar(side * offset)
+
+            if (isNearRoundabout && nearestRoundaboutCenter) {
+                const radial = point.clone().sub(nearestRoundaboutCenter.center)
+                if (radial.lengthSq() > 0.000001 && away.dot(radial) <= 0) continue
+            }
+
             const toRoad = away.clone().negate()
             placements.push({
                 position: point.clone().add(away),

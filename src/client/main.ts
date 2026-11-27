@@ -228,13 +228,17 @@ function addShowcaseProps(displayModels: LoadedRoadModel[], placements: Showcase
     })
 }
 
-function addRoadsideLamps(centerPath: ReturnType<typeof createRoadCenterPath>): void {
+function addRoadsideLamps(centerPath: ReturnType<typeof createRoadCenterPath>, roadSegments: RoadSegment[]): void {
     const lampModel =
         loadedRoadModels.find((model) => model.name === 'light_curved') ??
         loadedRoadModels.find((model) => model.name.startsWith('light_'))
     if (!lampModel) return
 
-    for (const placement of createRoadsideLampPlacements(centerPath)) {
+    const roundaboutCenters = roadSegments
+        .filter((segment) => segment.name === 'road_roundabout')
+        .map((segment) => new Vector3(segment.position.x, segment.position.y, segment.position.z))
+
+    for (const placement of createRoadsideLampPlacements(centerPath, 4, 1.1, roundaboutCenters)) {
         addCenteredProp(lampModel, placement.position, placement.rotation)
     }
 }
@@ -316,7 +320,7 @@ async function initializeRoad(): Promise<void> {
             addShowcaseProps(showcaseDisplayModels, displayPlacements)
             simulation.addParkedBeaconLights(addParkedVehicles(road, loadedVehicleModels))
         } else {
-            addRoadsideLamps(centerPath)
+            addRoadsideLamps(centerPath, road)
         }
         simulation.start(centerPath, reversePath, trafficVehicleModels)
         road.forEach((segment: RoadSegment) => {
