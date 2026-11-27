@@ -1,5 +1,23 @@
 import type { RoadModel, RoadSegment, TrafficVehicleModel } from '../data/models'
 
+export const defaultRoadLength = 10
+
+function getQueryInteger(params: URLSearchParams, key: string): number | undefined {
+    const value = params.get(key)
+    if (value === null || !/^\d+$/.test(value)) return undefined
+    const parsed = Number(value)
+    return Number.isSafeInteger(parsed) ? parsed : undefined
+}
+
+export function getRoadQuery(search: string): { length: number; seed?: number } {
+    const params = new URLSearchParams(search)
+    const length = getQueryInteger(params, 'length')
+    return {
+        length: length !== undefined && length >= 2 ? length : defaultRoadLength,
+        seed: getQueryInteger(params, 'seed')
+    }
+}
+
 async function getJson<T>(path: string): Promise<T> {
     const url = `/api${path}`
     const response = await fetch(url)

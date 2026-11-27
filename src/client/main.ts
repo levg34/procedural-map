@@ -25,7 +25,7 @@ import {
 } from '../data/lights'
 import type { RoadModel, RoadSegment } from '../data/models'
 import { isTrafficVehicleExcluded } from '../data/vehicles'
-import { getRoad, getRoadParts, getRoadShowcase, getVehicleModels } from './api'
+import { getRoad, getRoadParts, getRoadQuery, getRoadShowcase, getVehicleModels } from './api'
 import { createGrassGround } from './ground'
 import { createShowcasePlacements, isShowcaseProp } from './showcase'
 import { createRoadsideLampPlacements } from './streetLamps'
@@ -34,8 +34,7 @@ import { createTrafficSimulation, type LoadedTrafficVehicleModel, type VehicleFa
 import { createRoadCenterPath } from './vehiclePath'
 
 const isShowcase = window.location.pathname === '/showcase'
-const seedParam = new URLSearchParams(window.location.search).get('seed')
-const roadSeed = seedParam !== null && /^\d+$/.test(seedParam) ? Number(seedParam) : undefined
+const { length: roadLength, seed: roadSeed } = getRoadQuery(window.location.search)
 const reverseTrafficVehicleCount = isShowcase ? 1 : 8
 const forwardTrafficVehicleCount = isShowcase ? 0 : 4
 const laneOffset = 0.16
@@ -297,7 +296,7 @@ async function initializeRoad(): Promise<void> {
         const [roadModels, availableVehicleModels, road] = await Promise.all([
             getRoadParts(),
             getVehicleModels(),
-            isShowcase ? getRoadShowcase() : getRoad(10, roadSeed)
+            isShowcase ? getRoadShowcase() : getRoad(roadLength, roadSeed)
         ])
         const [loadedRoadModels, loadedVehicleModels] = await Promise.all([
             Promise.all(
