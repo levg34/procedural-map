@@ -1,5 +1,6 @@
 import {
     AmbientLight,
+    Box3,
     DirectionalLight,
     Mesh,
     MeshStandardMaterial,
@@ -28,7 +29,16 @@ import type { RoadModel, RoadSegment } from '../data/models'
 import { isTrafficVehicleExcluded } from '../data/vehicles'
 import { getRoad, getRoadParts, getRoadQuery, getRoadShowcase, getVehicleModels } from './api'
 import { createGrassGround } from './ground'
-import { createShowcasePlacements, isShowcaseProp, showcaseVehicleRotations } from './showcase'
+import {
+    createShowcasePlacements,
+    isShowcaseDisplayModel,
+    showcaseDisplayGap,
+    showcaseDisplayOffset,
+    showcaseSpacing,
+    showcaseVehicleOffset,
+    showcaseVehicleRotations,
+    type ShowcasePlacement
+} from './showcase'
 import { createRoadsideLampPlacements } from './streetLamps'
 import { enableHeadlightGlow, enableTailLightGlow, hasHeadlights } from './vehicleLights'
 import { createTrafficSimulation, type LoadedTrafficVehicleModel, type VehicleFactory } from './trafficSimulation'
@@ -242,6 +252,11 @@ function addStreetLightGlow(prop: Group, name: string): void {
     }
 }
 
+function getModelFootprint(model: GLTF): number {
+    const size = new Box3().setFromObject(model.scene).getSize(new Vector3())
+    return Math.max(size.x, size.z)
+}
+
 function addCenteredProp(model: LoadedRoadModel, position: Vector3, rotation: number): void {
     // The GLB node pushes geometry 0.75 forward; center it on the placement.
     const prop = model.model.scene.clone()
@@ -256,14 +271,8 @@ function addCenteredProp(model: LoadedRoadModel, position: Vector3, rotation: nu
     addModelLabel(model.name, position)
 }
 
-function addShowcaseProps(road: RoadSegment[]): void {
-    const propModels = models.road.filter((model) => isShowcaseProp(model.name))
-    const placements = createShowcasePlacements(road, propModels.length, {
-        offset: 3.4,
-        rotation: { left: Math.PI / 2, right: -Math.PI / 2 }
-    })
-
-    propModels.forEach((model, index) => {
+function addShowcaseProps(displayModels: LoadedRoadModel[], placements: ShowcasePlacement[]): void {
+    displayModels.forEach((model, index) => {
         const placement = placements[index]
         if (placement) addCenteredProp(model, placement.position, placement.rotation)
     })
@@ -282,7 +291,7 @@ function addRoadsideLamps(centerPath: ReturnType<typeof createRoadCenterPath>): 
 
 function addParkedVehicles(road: RoadSegment[], vehicleModels: LoadedTrafficVehicleModel[]): PointLight[] {
     const placements = createShowcasePlacements(road, vehicleModels.length, {
-        offset: 1.7,
+        offset: showcaseVehicleOffset,
         rotation: showcaseVehicleRotations
     })
     const beaconLights: PointLight[] = []
@@ -352,11 +361,31 @@ async function initializeRoad(): Promise<void> {
         const trafficVehicleModels = loadedVehicleModels.filter((model) => !isTrafficVehicleExcluded(model.name))
         models.index = 0
 
-        scene.add(createGrassGround(road))
+        const showcasePathNames = new Set(road.map((segment) => segment.name))
+        const showcaseDisplayModels = isShowcase
+            ? models.road.filter((model) => isShowcaseDisplayModel(model.name, showcasePathNames))
+            : []
+        const displayPlacements = isShowcase
+            ? createShowcasePlacements(
+                  road,
+                  showcaseDisplayModels.length,
+                  { offset: showcaseDisplayOffset, rotation: { left: Math.PI / 2, right: -Math.PI / 2 } },
+                  showcaseDisplayGap,
+                  showcaseDisplayModels.map((model) => getModelFootprint(model.model))
+              )
+            : []
+        const roadMinZ = Math.min(...road.map((segment) => segment.position.z))
+        const displayMinZ =
+            displayPlacements.length > 0
+                ? Math.min(...displayPlacements.map((placement) => placement.position.z))
+                : roadMinZ
+        const groundMargin = isShowcase ? Math.max(10, roadMinZ - displayMinZ + 3) : undefined
+        scene.add(createGrassGround(road, groundMargin))
+
         const centerPath = createRoadCenterPath(road)
         const reversePath = createRoadCenterPath(road, true)
         if (isShowcase) {
-            addShowcaseProps(road)
+            addShowcaseProps(showcaseDisplayModels, displayPlacements)
             simulation.addParkedBeaconLights(addParkedVehicles(road, loadedVehicleModels))
         } else {
             addRoadsideLamps(centerPath)
@@ -375,6 +404,7 @@ async function initializeRoad(): Promise<void> {
             }
             roadPart.position.set(segment.position.x, segment.position.y, segment.position.z)
             scene.add(roadPart)
+            addModelLabel(segment.name, roadPart.position)
         })
     } catch (error: unknown) {
         console.error('Failed to initialize road:', error)

@@ -8,6 +8,13 @@ export const showcaseVehicleRotations = {
     right: Math.PI / 4
 }
 
+export const showcaseSpacing = 1.5
+export const showcaseVehicleOffset = 1.7
+// Clearance between display-model bounds, and enough lane separation for 3x3
+// pieces to miss the widest parked vehicle (~0.34 radius).
+export const showcaseDisplayGap = 0.5
+export const showcaseDisplayOffset = 3.8
+
 export type ShowcasePlacement = {
     position: Vector3
     rotation: number
@@ -21,22 +28,26 @@ export type ShowcaseLayout = {
     rotation: number | { left: number; right: number }
 }
 
-// Everything in models/road that is not a road surface is a showcase prop:
-// street lights, construction gear, bridge pillars, and ground tiles.
-export function isShowcaseProp(name: string): boolean {
-    return !name.startsWith('road_')
+// The showcase road path already contains every connectable road piece. Anything
+// else in the catalog (non-road props and road variants that cannot be connected)
+// goes into the display lanes beside it.
+export function isShowcaseDisplayModel(name: string, showcasePathNames: ReadonlySet<string>): boolean {
+    return !showcasePathNames.has(name)
 }
 
 /**
  * Places display items in two orderly lanes beside the road, one item per slot.
- * The widest prop is a 1 x 1 ground tile and the longest vehicle is about 0.7
- * units, so the default 1.5-unit spacing leaves clear gaps between neighbors.
+ * Each row is sized from the largest footprint in that row so wide road variants
+ * never overlap their neighbors. `sizes` are footprint radii (half the larger
+ * X/Z dimension); when omitted, items are treated as points and only `spacing`
+ * separates them.
  */
 export function createShowcasePlacements(
     segments: RoadSegment[],
     count: number,
     layout: ShowcaseLayout,
-    spacing = 1.5
+    spacing = showcaseSpacing,
+    sizes: number[] = []
 ): ShowcasePlacement[] {
     if (count < 1 || segments.length < 1) return []
 
@@ -46,6 +57,8 @@ export function createShowcasePlacements(
     const maxX = Math.max(...xs)
     const maxZ = Math.max(...zs)
     const placements: ShowcasePlacement[] = []
+    let rowCenterZ = maxZ
+    let previousRowRadius = 0
 
     for (let index = 0; index < count; index++) {
         const left = index % 2 === 0
@@ -53,12 +66,16 @@ export function createShowcasePlacements(
         const rotation =
             typeof layout.rotation === 'number' ? layout.rotation : left ? layout.rotation.left : layout.rotation.right
 
+        if (left) {
+            const first = sizes[row * 2] ?? 0
+            const second = sizes[row * 2 + 1] ?? 0
+            const rowRadius = Math.max(first, second)
+            rowCenterZ -= previousRowRadius + rowRadius + spacing
+            previousRowRadius = rowRadius
+        }
+
         placements.push({
-            position: new Vector3(
-                left ? minX - layout.offset : maxX + layout.offset,
-                0,
-                maxZ - spacing - row * spacing
-            ),
+            position: new Vector3(left ? minX - layout.offset : maxX + layout.offset, 0, rowCenterZ),
             rotation
         })
     }

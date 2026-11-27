@@ -22,9 +22,10 @@ cast warm light pools. On `/showcase`, press
 **C** to switch between following the ambulance and three.js `FlyControls`
 translation while `OrbitControls` stays active for orbiting and zooming;
 **WASD** move, **R/F** lower/raise, mouse drag orbits, and the wheel zooms.
-Press **C** again to resume following. Displayed model names are labeled beside each model;
-press **L** to hide or show them. Vite serves the browser app and proxies `/api/*` and
-`/model/*` requests to Express on port 3210. Press **Space** to preview road models.
+Press **C** again to resume following. Every model is labeled: road pieces on the route, plus
+the remaining road variants and props parked in display lanes beside it. Press **L** to
+hide or show the labels. Vite serves the browser app and proxies `/api/*` and `/model/*`
+requests to Express on port 3210. Press **Space** to preview road models.
 
 For a production build and server, run `npm start` and open
 `http://localhost:3210` or `http://localhost:3210/showcase`.

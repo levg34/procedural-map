@@ -54,8 +54,8 @@ function createGrassTexture(): CanvasTexture {
     return texture
 }
 
-export function createGrassGround(segments: RoadSegment[]): Mesh {
-    const bounds = getGroundBounds(segments, groundMargin)
+export function createGrassGround(segments: RoadSegment[], margin = groundMargin): Mesh {
+    const bounds = getGroundBounds(segments, margin)
     const texture = createGrassTexture()
     texture.repeat.set(bounds.width / textureScale, bounds.depth / textureScale)
 
