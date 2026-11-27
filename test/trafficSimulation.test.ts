@@ -410,7 +410,7 @@ describe('traffic simulation', () => {
         )
     })
 
-    it('swaps only the visual clone on respawn when light signatures match', () => {
+    it('swaps only the visual clone on respawn when light configs match', () => {
         const sedan = vehicleModel('sedan')
         sedan.model.scene.name = 'sedan'
         const van = vehicleModel('van')
@@ -503,7 +503,65 @@ describe('traffic simulation', () => {
         assert.strictEqual(visualName(), 'sedan')
     })
 
-    it('keeps the visual when no other model shares its light signature', () => {
+    it('does not swap police and tractorPolice because their light rigs differ', () => {
+        let vehicleObject: Group | undefined
+        const { simulation } = createSetup({
+            reverseTrafficVehicleCount: 0,
+            forwardTrafficVehicleCount: 1,
+            speed: () => 5,
+            random: () => 0,
+            createVehicle: (model) => {
+                const object = new Group()
+                const visual = new Group()
+                visual.name = model.name
+                object.add(visual)
+                vehicleObject = object
+                return { object, visual, beaconLights: [] }
+            }
+        })
+        simulation.start(straightPath(), straightPath(10, 0), [vehicleModel('police'), vehicleModel('tractorPolice')])
+
+        const visualName = (): string | undefined =>
+            vehicleObject?.children.find((child): child is Group => child instanceof Group)?.name
+
+        assert.strictEqual(visualName(), 'police')
+
+        // Previously both shared a 1:2 signature and were forced to alternate.
+        simulation.update(1.05)
+
+        assert.strictEqual(visualName(), 'police')
+    })
+
+    it('does not swap ambulance and firetruck because their light rigs differ', () => {
+        let vehicleObject: Group | undefined
+        const { simulation } = createSetup({
+            reverseTrafficVehicleCount: 0,
+            forwardTrafficVehicleCount: 1,
+            speed: () => 5,
+            random: () => 0,
+            createVehicle: (model) => {
+                const object = new Group()
+                const visual = new Group()
+                visual.name = model.name
+                object.add(visual)
+                vehicleObject = object
+                return { object, visual, beaconLights: [] }
+            }
+        })
+        simulation.start(straightPath(), straightPath(10, 0), [vehicleModel('ambulance'), vehicleModel('firetruck')])
+
+        const visualName = (): string | undefined =>
+            vehicleObject?.children.find((child): child is Group => child instanceof Group)?.name
+
+        assert.strictEqual(visualName(), 'ambulance')
+
+        // Previously both shared a 2:2 signature and could swap lightbars.
+        simulation.update(1.05)
+
+        assert.strictEqual(visualName(), 'ambulance')
+    })
+
+    it('keeps the visual when no other model shares its light config', () => {
         let vehicleObject: Group | undefined
         const { simulation } = createSetup({
             reverseTrafficVehicleCount: 0,

@@ -1,6 +1,6 @@
 import { Group, Object3D, PointLight, Scene, Vector3 } from 'three'
 import type { GLTF } from 'three/addons/loaders/GLTFLoader.js'
-import { emergencyBeaconPlacements } from '../data/lights'
+import { defaultHeadlightPlacement, emergencyBeaconPlacements, headlightPlacements } from '../data/lights'
 import type { TrafficVehicleModel } from '../data/models'
 import { getTrafficVehicleSpeed, getTrafficVehicleWeight } from '../data/vehicles'
 import { vehicleYOffset } from './vehicleConstants'
@@ -56,7 +56,7 @@ type TrafficVehicle = PreparedVehicle & {
     desiredSpeed: number
     actualSpeed: number
     modelName: string
-    lightSignature: string
+    lightConfigKey: string
 }
 
 type Leader = {
@@ -81,24 +81,30 @@ function toggleBeacons(lights: PointLight[]): void {
     }
 }
 
-/** Counts the lights `prepareVehicle` would attach: 2 spotlights for cars with
- * headlight materials, plus the initially visible beacon point lights. Swapping
- * models with the same signature keeps Three.js's shader cache key unchanged. */
-function getLightSignature(model: LoadedTrafficVehicleModel): string {
+/** Encodes the full light rig `prepareVehicle` would attach: spotlight count and
+ * placement, plus every beacon placement (hidden ones start blinking too). Only
+ * models with the same key can swap, so positions/colors stay correct and the
+ * Three.js shader cache key is unchanged. */
+function getLightConfigKey(model: LoadedTrafficVehicleModel): string {
     const spotLights = hasHeadlights(model.model.scene) ? 2 : 0
-    const pointLights = (emergencyBeaconPlacements[model.name] ?? []).filter(
-        (placement) => placement.initiallyVisible
-    ).length
-    return `${pointLights}:${spotLights}`
+    const headlights = headlightPlacements[model.name] ?? defaultHeadlightPlacement
+    const headlightKey = spotLights === 0 ? 'none' : `${headlights.halfWidth},${headlights.height},${headlights.frontZ}`
+    const beaconKey = (emergencyBeaconPlacements[model.name] ?? [])
+        .map(
+            (placement) =>
+                `${placement.x},${placement.y},${placement.z},${placement.color},${placement.initiallyVisible ? 1 : 0}`
+        )
+        .join(';')
+    return `${spotLights}|${headlightKey}|${beaconKey}`
 }
 
 function buildModelGroups(models: readonly LoadedTrafficVehicleModel[]): Map<string, LoadedTrafficVehicleModel[]> {
     const groups = new Map<string, LoadedTrafficVehicleModel[]>()
     for (const model of models) {
-        const signature = getLightSignature(model)
-        const group = groups.get(signature) ?? []
+        const key = getLightConfigKey(model)
+        const group = groups.get(key) ?? []
         group.push(model)
-        groups.set(signature, group)
+        groups.set(key, group)
     }
     return groups
 }
@@ -221,7 +227,7 @@ export function createTrafficSimulation(options: TrafficSimulationOptions): Traf
             desiredSpeed,
             actualSpeed: desiredSpeed,
             modelName: model.name,
-            lightSignature: getLightSignature(model)
+            lightConfigKey: getLightConfigKey(model)
         }
     }
 
@@ -272,7 +278,7 @@ export function createTrafficSimulation(options: TrafficSimulationOptions): Traf
         // Draw from the whole signature group, including the current model: a
         // self-loop keeps the stationary distribution equal to `weight`, whereas
         // excluding it forces alternation in two-model groups and skews rarities.
-        const candidates = modelGroups.get(vehicle.lightSignature) ?? []
+        const candidates = modelGroups.get(vehicle.lightConfigKey) ?? []
         if (vehicle.visual && candidates.length > 0) {
             const replacement = pickWeighted(candidates, weight, random)
             if (replacement.name !== vehicle.modelName) {

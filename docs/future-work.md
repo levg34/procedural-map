@@ -13,6 +13,10 @@
 
 - The `construction_light` model's light should blink, and be less bright
 
+## Traffic
+
+- **Reconfigure lights in place when swapping vehicle visuals.** `respawnVehicle` in `src/client/trafficSimulation.ts` currently replaces only the GLB clone, so beacon/spotlight positions and colors stay from the model the vehicle started with, and `enableHeadlightGlow` / `enableTailLightGlow` are never applied to a replacement's materials. We avoid mismatches today by only swapping models with an identical full light config (`getLightConfigKey`). A future improvement could keep the same light objects (preserving Three.js's shader cache key) but copy the replacement's beacon positions/colors and headlight placement onto them, and enable glow on the replacement visual's materials. The number of visible lights must still stay constant.
+
 ## Deployment
 
 - Deploy the app on Vercel or similar "free" platform
