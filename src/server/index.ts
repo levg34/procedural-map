@@ -9,6 +9,12 @@ const api = express.Router()
 const rootDirectory = join(dirname(fileURLToPath(import.meta.url)), '..', '..')
 const port = 3210
 
+function parseSeed(value: unknown): number | undefined {
+    if (typeof value !== 'string') return undefined
+    const seed = Number(value)
+    return Number.isInteger(seed) && seed >= 0 ? seed : undefined
+}
+
 app.use(express.static(join(rootDirectory, 'public')))
 
 app.get(['/', '/showcase'], (_req, res) => {
@@ -33,7 +39,8 @@ api.get('/road/:length', async (req, res) => {
     }
 
     try {
-        const road = await Road.build(length)
+        const seed = parseSeed(req.query.seed) ?? Math.floor(Math.random() * 2 ** 32)
+        const road = await Road.build(length, seed)
         res.json(road.getPath())
     } catch (error) {
         console.error(error)

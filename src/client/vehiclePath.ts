@@ -20,6 +20,12 @@ function getRouteDirections(segment: RoadSegment, reverse: boolean): RoadVector[
     return reverse ? [...segment.usedDirections].reverse() : segment.usedDirections
 }
 
+function isFirstExit(entryDirection: RoadVector, exitDirection: RoadVector): boolean {
+    const entry = new Vector3(entryDirection.x, 0, entryDirection.z)
+    const exit = new Vector3(exitDirection.x, 0, exitDirection.z)
+    return entry.cross(exit).y > 0.000001
+}
+
 function createRoundaboutPath(segment: RoadSegment, entryDirection: RoadVector, exitDirection: RoadVector): RoadPath {
     // The vehicle's 0.16 right-lane offset puts it at radius 0.8 on the asphalt.
     const radius = 0.64
@@ -123,7 +129,7 @@ export function createRoadCenterPath(segments: RoadSegment[], reverse = false): 
             throw new Error(`Road segment ${segment?.name ?? index} is missing a route connector`)
         }
 
-        if (reverse && segment.name === 'road_roundabout') {
+        if (segment.name === 'road_roundabout' && !isFirstExit(entryDirection, exitDirection)) {
             curve.add(createRoundaboutPath(segment, entryDirection, exitDirection))
             continue
         }

@@ -1,10 +1,25 @@
 import { Vector3 } from 'three'
 import type { RoadPartMetadata } from '../data/models'
-import { roadTypes, type RoadFootprint } from '../data/road'
+import { roadTypes, roadVariantGroups, type RoadFootprint } from '../data/road'
 import { getRoadParts } from './utils'
 
 type RoadPartType = RoadPartMetadata & {
     rotation?: number
+}
+
+type RoadOptions = { length: number; seed?: number } | { showcase: true }
+
+const defaultSeed = 1
+
+function createSeededRandom(seed: number): () => number {
+    let state = seed >>> 0
+    return () => {
+        state = (state + 0x6d2b79f5) >>> 0
+        let value = state
+        value = Math.imul(value ^ (value >>> 15), value | 1)
+        value ^= value + Math.imul(value ^ (value >>> 7), value | 61)
+        return ((value ^ (value >>> 14)) >>> 0) / 4294967296
+    }
 }
 
 class RoadPart {
@@ -161,10 +176,11 @@ class LinkedRoadPart extends RoadPart {
 class Road {
     parts: RoadPart[]
     path: LinkedRoadPart[]
+    private readonly random: () => number
 
-    static async build(length: number): Promise<Road> {
+    static async build(length: number, seed = defaultSeed): Promise<Road> {
         const parts = await getRoadParts()
-        return new Road(parts, { length })
+        return new Road(parts, { length, seed })
     }
 
     static async buildShowcase(): Promise<Road> {
@@ -172,9 +188,10 @@ class Road {
         return new Road(parts, { showcase: true })
     }
 
-    constructor(parts: RoadPartMetadata[], options: { length: number } | { showcase: true }) {
+    constructor(parts: RoadPartMetadata[], options: RoadOptions) {
         this.parts = parts.map((part) => new RoadPart(part))
         this.path = []
+        this.random = createSeededRandom('showcase' in options ? defaultSeed : (options.seed ?? defaultSeed))
         if ('showcase' in options) {
             this.createShowcasePath()
         } else {
@@ -243,6 +260,32 @@ class Road {
         }
     }
 
+    private pickRoadPart(names: readonly string[]): RoadPart {
+        const availableNames = names.filter((name) => this.parts.some((part) => part.name === name))
+        if (availableNames.length < 1) {
+            throw new Error(`Required road part not found: ${names.join(', ')}`)
+        }
+
+        const name = availableNames[Math.floor(this.random() * availableNames.length)] ?? availableNames[0]
+        if (!name) throw new Error(`Required road part not found: ${names.join(', ')}`)
+
+        const part = this.getRoadPartByName(name)
+        if (!part) throw new Error(`Required road part not found: ${name}`)
+        return part
+    }
+
+    private pickRoundaboutSlot(sections: RoadPart[][]): { section: number; index: number } | null {
+        const intersectionNames = new Set<string>(roadVariantGroups.intersection)
+        const slots = sections.flatMap((section, sectionIndex) =>
+            section
+                .map((part, index) => ({ part, index, sectionIndex }))
+                .filter(({ part }) => !intersectionNames.has(part.name))
+                .map(({ index, sectionIndex }) => ({ section: sectionIndex, index }))
+        )
+        if (slots.length < 1) return null
+        return slots[Math.floor(this.random() * slots.length)] ?? null
+    }
+
     createPath(length: number, turns: number): void {
         const end = this.getRoadPartByName('road_end')
         if (!end) throw new Error('Required road part not found: road_end')
@@ -250,14 +293,19 @@ class Road {
         const start = end.clone()
         start.rotate(Math.PI)
         this.connect(start)
-        this.connectAll(this.createStraightLine(length))
-        for (let index = 0; index < turns; index++) {
-            const turn = this.getRoadPartByName('road_bend')
-            if (!turn) throw new Error('Required road part not found: road_bend')
 
-            this.connect(turn)
-            this.connectAll(this.createStraightLine(length))
+        const sections = Array.from({ length: turns + 1 }, () => this.createStraightLine(length))
+        const roundaboutSlot = this.pickRoundaboutSlot(sections)
+        if (roundaboutSlot) {
+            const section = sections[roundaboutSlot.section]
+            if (section) section[roundaboutSlot.index] = this.pickRoadPart(roadVariantGroups.roundabout)
         }
+
+        sections.forEach((section, sectionIndex) => {
+            this.connectAll(section)
+            if (sectionIndex < turns) this.connect(this.pickRoadPart(roadVariantGroups.turn))
+        })
+
         this.connect(end)
     }
 
@@ -280,20 +328,13 @@ class Road {
         const path: RoadPart[] = []
         if (length < 2) return path
 
-        const straight = this.getRoadPartByName('road_straight')
-        const crossing = this.getRoadPartByName('road_crossing')
-        if (!straight || !crossing) {
-            throw new Error('Required road parts not found: road_straight and road_crossing')
-        }
-
         const crossingPosition = Math.floor(length / 2)
-
         for (let i = 0; i < length; ++i) {
-            if (i === crossingPosition) {
-                path.push(crossing)
-            } else {
-                path.push(straight.clone())
-            }
+            path.push(
+                i === crossingPosition
+                    ? this.pickRoadPart(roadVariantGroups.intersection)
+                    : this.pickRoadPart(roadVariantGroups.straight)
+            )
         }
 
         return path

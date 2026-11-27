@@ -21,6 +21,14 @@ export const roadFootprints: Record<string, RoadFootprint> = {
     road_split: { width: 1, depth: 2 }
 }
 
+// Pieces that can be swapped without changing the shape of a generated road section.
+export const roadVariantGroups = {
+    straight: ['road_straight', 'road_drivewaySingle', 'road_drivewayDouble'],
+    intersection: ['road_crossing', 'road_crossroad', 'road_crossroadLine', 'road_crossroadPath'],
+    turn: ['road_bend', 'road_bendSidewalk', 'road_bendSquare', 'road_curve', 'road_curvePavement'],
+    roundabout: ['road_roundabout']
+} as const
+
 export const roadConnectionOffsets: Record<string, Vector3[]> = {
     road_curve: [new Vector3(1, 0, 0.5), new Vector3(-0.5, 0, -1)],
     road_curveIntersection: [new Vector3(1, 0, 0.5), new Vector3(-1, 0, 0.5), new Vector3(-0.5, 0, -1)],

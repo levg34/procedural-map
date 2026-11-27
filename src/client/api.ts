@@ -11,7 +11,8 @@ async function getJson<T>(path: string): Promise<T> {
 }
 
 export const getRoadParts = (): Promise<RoadModel[]> => getJson('/road_parts')
-export const getRoad = (length: number): Promise<RoadSegment[]> => getJson(`/road/${length}`)
+export const getRoad = (length: number, seed?: number): Promise<RoadSegment[]> =>
+    getJson(`/road/${length}${seed === undefined ? '' : `?seed=${seed}`}`)
 export const getRoadShowcase = (): Promise<RoadSegment[]> => getJson('/road/showcase')
 export const getTrafficVehicleModels = (): Promise<TrafficVehicleModel[]> => getJson('/traffic_vehicles')
 export const getVehicleModels = (): Promise<TrafficVehicleModel[]> => getJson('/vehicles')

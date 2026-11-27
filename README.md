@@ -29,6 +29,10 @@ to preview road models.
 For a production build and server, run `npm start` and open
 `http://localhost:3210` or `http://localhost:3210/showcase`.
 
+Generated roads use a new random seed on each request. Add `?seed=42` to the page URL
+(for example `http://localhost:5173/?seed=42`) or call `/api/road/10?seed=42` directly
+to reproduce a particular layout.
+
 ## Checks
 
 ```sh

@@ -1,11 +1,68 @@
 import assert from 'node:assert/strict'
 import { CurvePath, Vector3 } from 'three'
 import { beforeAll, describe, it } from 'vitest'
-import { Road } from '../src/server/roadBuilder'
-import { roadTypes } from '../src/data/road'
+import { LinkedRoadPart, Road } from '../src/server/roadBuilder'
+import { roadTypes, roadVariantGroups } from '../src/data/road'
 import { createRoadCenterPath, getLanePosition, getTurnaroundPose } from '../src/client/vehiclePath'
 import { getRoadParts } from '../src/server/utils'
 import { doubleEquals, vectors3Equals } from './testUtils'
+
+function roadSignature(road: Road): string {
+    return road.path
+        .map((part) =>
+            [
+                part.name,
+                part.position.toArray().join(','),
+                part.rotation ?? 0,
+                part.usedDirections.map((direction) => direction.toArray().join(',')).join(';')
+            ].join('|')
+        )
+        .join('/')
+}
+
+function assertPartsConnected(parts: LinkedRoadPart[]): void {
+    for (let index = 1; index < parts.length; index++) {
+        const previous = parts[index - 1]
+        const current = parts[index]
+        assert.ok(previous && current)
+        assert.ok(
+            previous.usedDirections.some((previousDirection) =>
+                current.usedDirections.some(
+                    (currentDirection) =>
+                        vectors3Equals(previousDirection.clone().add(currentDirection), new Vector3()) &&
+                        vectors3Equals(
+                            previous.position.clone().add(previous.getConnectionOffset(previousDirection)),
+                            current.position.clone().add(current.getConnectionOffset(currentDirection))
+                        )
+                )
+            ),
+            `${previous.name} at ${previous.position.toArray()} is not connected to ${current.name} at ${current.position.toArray()}`
+        )
+    }
+}
+
+function assertNoOverlappingParts(parts: LinkedRoadPart[]): void {
+    for (let index = 0; index < parts.length; index++) {
+        const part = parts[index]
+        assert.ok(part)
+        const footprint = part.getFootprint()
+
+        for (let otherIndex = index + 1; otherIndex < parts.length; otherIndex++) {
+            const other = parts[otherIndex]
+            assert.ok(other)
+            const otherFootprint = other.getFootprint()
+            const overlapsX =
+                Math.abs(part.position.x - other.position.x) < (footprint.width + otherFootprint.width) / 2 - 0.000001
+            const overlapsZ =
+                Math.abs(part.position.z - other.position.z) < (footprint.depth + otherFootprint.depth) / 2 - 0.000001
+
+            assert.ok(
+                !overlapsX || !overlapsZ,
+                `Parts ${part.name} and ${other.name} overlap at ${part.position.toArray()} and ${other.position.toArray()}`
+            )
+        }
+    }
+}
 
 describe('Road', () => {
     const roadLength = 10
@@ -24,9 +81,10 @@ describe('Road', () => {
         it('should be exactly as long as intended', function () {
             assert.strictEqual(road.createStraightLine(straightLength).length, straightLength)
         })
-        it('should contain exactly ONE road crossing', () => {
+        it('should contain exactly ONE intersection piece', () => {
+            const intersectionNames = new Set<string>(roadVariantGroups.intersection)
             assert.strictEqual(
-                road.createStraightLine(straightLength).filter((e) => e.name === 'road_crossing').length,
+                road.createStraightLine(straightLength).filter((part) => intersectionNames.has(part.name)).length,
                 1
             )
         })
@@ -99,47 +157,8 @@ describe('Road', () => {
             const road = await Road.buildShowcase()
             const connectedRoad = road.path.filter((part) => part.directions.length > 0)
 
-            for (let index = 1; index < connectedRoad.length; index++) {
-                const previous = connectedRoad[index - 1]
-                const current = connectedRoad[index]
-                assert.ok(previous && current)
-                assert.ok(
-                    previous.usedDirections.some((previousDirection) =>
-                        current.usedDirections.some(
-                            (currentDirection) =>
-                                vectors3Equals(previousDirection.clone().add(currentDirection), new Vector3()) &&
-                                vectors3Equals(
-                                    previous.position.clone().add(previous.getConnectionOffset(previousDirection)),
-                                    current.position.clone().add(current.getConnectionOffset(currentDirection))
-                                )
-                        )
-                    ),
-                    `${previous.name} at ${previous.position.toArray()} is not connected to ${current.name} at ${current.position.toArray()}`
-                )
-            }
-
-            for (let index = 0; index < road.path.length; index++) {
-                const part = road.path[index]
-                assert.ok(part)
-                const footprint = part.getFootprint()
-
-                for (let otherIndex = index + 1; otherIndex < road.path.length; otherIndex++) {
-                    const other = road.path[otherIndex]
-                    assert.ok(other)
-                    const otherFootprint = other.getFootprint()
-                    const overlapsX =
-                        Math.abs(part.position.x - other.position.x) <
-                        (footprint.width + otherFootprint.width) / 2 - 0.000001
-                    const overlapsZ =
-                        Math.abs(part.position.z - other.position.z) <
-                        (footprint.depth + otherFootprint.depth) / 2 - 0.000001
-
-                    assert.ok(
-                        !overlapsX || !overlapsZ,
-                        `Parts ${part.name} and ${other.name} overlap at ${part.position.toArray()} and ${other.position.toArray()}`
-                    )
-                }
-            }
+            assertPartsConnected(connectedRoad)
+            assertNoOverlappingParts(road.path)
 
             const noEntry = road.path.find((part) => part.name === 'road_square')
             assert.ok(noEntry)
@@ -212,36 +231,47 @@ describe('Road', () => {
             assert.ok(turnStart.tangent.dot(forwardLane.tangent) > 0.999999)
             assert.ok(turnEnd.tangent.dot(reverseLane.tangent) > 0.999999)
         })
-        it('should contain road crossings', () => {
-            assert.ok(road.path.map((e) => e.name).includes('road_crossing'))
+        it('should contain an intersection piece', () => {
+            const intersectionNames = new Set<string>(roadVariantGroups.intersection)
+            assert.ok(road.path.some((part) => intersectionNames.has(part.name)))
         })
-        it('should be continuous', () => {
-            for (let index = 1; index < road.path.length; index++) {
-                const previous = road.path[index - 1]
-                const current = road.path[index]
-                const direction = current.position.clone().sub(previous.position)
-
-                assert.ok(
-                    previous.usedDirections.some((usedDirection) => vectors3Equals(usedDirection, direction)),
-                    `${previous.name} at ${previous.position.toArray()} is not connected to ${current.name} at ${current.position.toArray()}`
-                )
-            }
+        it('should contain a roundabout', () => {
+            assert.strictEqual(road.path.filter((part) => part.name === 'road_roundabout').length, 1)
         })
-        it('should not place multiple parts at the same position', () => {
-            for (let index = 0; index < road.path.length; index++) {
-                for (let otherIndex = index + 1; otherIndex < road.path.length; otherIndex++) {
-                    assert.ok(
-                        !vectors3Equals(road.path[index].position, road.path[otherIndex].position),
-                        `Parts ${index} and ${otherIndex} overlap at ${road.path[index].position.toArray()}`
-                    )
-                }
-            }
+        it('should be continuous and avoid overlapping parts', () => {
+            assertPartsConnected(road.path.filter((part) => part.usedDirections.length > 0))
+            assertNoOverlappingParts(road.path)
         })
         it('should have a start and an end', () => {
             assert.strictEqual(road.path.filter((e) => e.name === 'road_end').length, 2)
         })
         it('should contain turns', () => {
             assert.ok(road.path.map((e) => e.name).filter((e) => roadTypes.turn.for.includes(e)).length > 0)
+        })
+    })
+    describe('seeded road variants', () => {
+        it('should produce identical roads for the same seed', async () => {
+            const first = await Road.build(roadLength, 42)
+            const second = await Road.build(roadLength, 42)
+
+            assert.strictEqual(roadSignature(first), roadSignature(second))
+        })
+        it('should produce different roads for different seeds', async () => {
+            const first = await Road.build(roadLength, 1)
+            const second = await Road.build(roadLength, 2)
+
+            assert.notStrictEqual(roadSignature(first), roadSignature(second))
+        })
+        it('should keep generated roads connected and routable across many seeds', async () => {
+            for (let seed = 0; seed < 30; seed++) {
+                const road = await Road.build(roadLength, seed)
+
+                assertPartsConnected(road.path.filter((part) => part.usedDirections.length > 0))
+                assertNoOverlappingParts(road.path)
+                assert.strictEqual(road.path.filter((part) => part.name === 'road_roundabout').length, 1)
+                assert.ok(createRoadCenterPath(road.path).getLength() > 0)
+                assert.ok(createRoadCenterPath(road.path, true).getLength() > 0)
+            }
         })
     })
 })
