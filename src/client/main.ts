@@ -29,6 +29,7 @@ import type { RoadModel, RoadSegment } from '../data/models'
 import { isTrafficVehicleExcluded } from '../data/vehicles'
 import { getRoad, getRoadParts, getRoadQuery, getRoadShowcase, getVehicleModels } from './api'
 import { createGrassGround } from './ground'
+import { getRoadBounds } from './roadBounds'
 import {
     createShowcasePlacements,
     isShowcaseDisplayModel,
@@ -374,7 +375,7 @@ async function initializeRoad(): Promise<void> {
                   showcaseDisplayModels.map((model) => getModelFootprint(model.model))
               )
             : []
-        const roadMinZ = Math.min(...road.map((segment) => segment.position.z))
+        const { minZ: roadMinZ } = getRoadBounds(road)
         const displayMinZ =
             displayPlacements.length > 0
                 ? Math.min(...displayPlacements.map((placement) => placement.position.z))

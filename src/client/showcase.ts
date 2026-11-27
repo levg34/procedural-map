@@ -1,5 +1,6 @@
 import { Vector3 } from 'three'
 import type { RoadSegment } from '../data/models'
+import { getRoadBounds } from './roadBounds'
 
 // Angled toward the road from each side, keeping headlights off the neighboring
 // display row while leaving the tail lights visible.
@@ -51,11 +52,7 @@ export function createShowcasePlacements(
 ): ShowcasePlacement[] {
     if (count < 1 || segments.length < 1) return []
 
-    const xs = segments.map((segment) => segment.position.x)
-    const zs = segments.map((segment) => segment.position.z)
-    const minX = Math.min(...xs)
-    const maxX = Math.max(...xs)
-    const maxZ = Math.max(...zs)
+    const { minX, maxX, maxZ } = getRoadBounds(segments)
     const placements: ShowcasePlacement[] = []
     let rowCenterZ = maxZ
     let previousRowRadius = 0

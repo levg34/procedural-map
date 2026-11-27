@@ -62,12 +62,6 @@ repeated in `main.ts` and `trafficSimulation.ts`. Promoting them to shared
 constants in `src/data/` or a small `src/client/vehicleConstants.ts` would remove
 the duplication.
 
-### Shared road bounds helper
-
-`src/client/ground.ts` and `src/client/showcase.ts` both compute X/Z extents from
-a road's segments. One pure `getRoadBounds(road)` helper in `src/client/` would
-remove the duplication.
-
 ### Roundabout path module
 
 `src/client/vehiclePath.ts` has a self-contained ~70-line `createRoundaboutPath()`

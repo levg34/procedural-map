@@ -1,5 +1,6 @@
 import { CanvasTexture, Mesh, MeshStandardMaterial, PlaneGeometry, RepeatWrapping, SRGBColorSpace } from 'three'
 import type { RoadSegment } from '../data/models'
+import { getRoadBounds } from './roadBounds'
 
 const groundMargin = 10
 const textureScale = 4
@@ -15,12 +16,11 @@ export type GroundBounds = {
 export function getGroundBounds(segments: RoadSegment[], margin: number): GroundBounds {
     if (segments.length === 0) return { centerX: 0, centerZ: 0, width: 1, depth: 1 }
 
-    const xs = segments.map((segment) => segment.position.x)
-    const zs = segments.map((segment) => segment.position.z)
-    const minX = Math.min(...xs) - margin
-    const maxX = Math.max(...xs) + margin
-    const minZ = Math.min(...zs) - margin
-    const maxZ = Math.max(...zs) + margin
+    const roadBounds = getRoadBounds(segments)
+    const minX = roadBounds.minX - margin
+    const maxX = roadBounds.maxX + margin
+    const minZ = roadBounds.minZ - margin
+    const maxZ = roadBounds.maxZ + margin
 
     return {
         centerX: (minX + maxX) / 2,
