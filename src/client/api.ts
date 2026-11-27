@@ -1,4 +1,4 @@
-import type { RoadModel, RoadSegment, TrafficVehicleModel } from '../data/models'
+import type { RoadDecoration, RoadModel, RoadSegment, TrafficVehicleModel } from '../data/models'
 
 export const defaultRoadLength = 10
 
@@ -18,6 +18,8 @@ export function getRoadQuery(search: string): { length: number; seed?: number } 
     }
 }
 
+export type RoadResponse = { path: RoadSegment[]; decorations: RoadDecoration[] }
+
 async function getJson<T>(path: string): Promise<T> {
     const url = `/api${path}`
     const response = await fetch(url)
@@ -29,8 +31,8 @@ async function getJson<T>(path: string): Promise<T> {
 }
 
 export const getRoadParts = (): Promise<RoadModel[]> => getJson('/road_parts')
-export const getRoad = (length: number, seed?: number): Promise<RoadSegment[]> =>
+export const getRoad = (length: number, seed?: number): Promise<RoadResponse> =>
     getJson(`/road/${length}${seed === undefined ? '' : `?seed=${seed}`}`)
-export const getRoadShowcase = (): Promise<RoadSegment[]> => getJson('/road/showcase')
+export const getRoadShowcase = (): Promise<RoadResponse> => getJson('/road/showcase')
 export const getTrafficVehicleModels = (): Promise<TrafficVehicleModel[]> => getJson('/traffic_vehicles')
 export const getVehicleModels = (): Promise<TrafficVehicleModel[]> => getJson('/vehicles')

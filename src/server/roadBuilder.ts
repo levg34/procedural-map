@@ -1,5 +1,5 @@
 import { Vector3 } from 'three'
-import type { RoadPartMetadata } from '../data/models'
+import type { RoadDecoration, RoadPartMetadata } from '../data/models'
 import { roadTypes, roadVariantGroups, type RoadFootprint } from '../data/road'
 import { getRoadParts } from './utils'
 
@@ -176,6 +176,7 @@ class LinkedRoadPart extends RoadPart {
 class Road {
     parts: RoadPart[]
     path: LinkedRoadPart[]
+    decorations: RoadDecoration[] = []
     private readonly random: () => number
 
     static async build(length: number, seed = defaultSeed): Promise<Road> {
@@ -191,6 +192,7 @@ class Road {
     constructor(parts: RoadPartMetadata[], options: RoadOptions) {
         this.parts = parts.map((part) => new RoadPart(part))
         this.path = []
+        this.decorations = []
         this.random = createSeededRandom('showcase' in options ? defaultSeed : (options.seed ?? defaultSeed))
         if ('showcase' in options) {
             this.createShowcasePath()
@@ -307,6 +309,35 @@ class Road {
         })
 
         this.connect(end)
+        this.addDecorationCaps()
+    }
+
+    private addDecorationCaps(): void {
+        const connectedSegments = this.path.filter((segment) => segment.usedDirections.length > 0)
+        const first = connectedSegments[0]
+        const last = connectedSegments[connectedSegments.length - 1]
+        const occupied = new Set(this.path.map((part) => part.position.toArray().join(',')))
+        const decorationNames = ['construction_barrier', 'construction_pylon', 'construction_light']
+
+        for (const part of this.path) {
+            if (part.usedDirections.length === 0) continue
+            const freeDirections = part.getAvailableDirections()
+            for (const freeDir of freeDirections) {
+                if (part === first && first.usedDirections.length > 0 && freeDir.clone().sub(first.usedDirections[0]).length() < 0.0000001) continue
+                if (part === last && last.usedDirections.length > 0 && freeDir.clone().sub(last.usedDirections[0]).length() < 0.0000001) continue
+
+                const dirKey = freeDir.toArray().join(',')
+                const pickIndex = Math.floor(this.random() * decorationNames.length)
+                const name = decorationNames[pickIndex % decorationNames.length]
+                const outward = freeDir.clone().normalize()
+                const pos = part.position.clone().add(part.getConnectionOffset(freeDir)).add(outward.clone().multiplyScalar(0.5))
+                const key = pos.toArray().join(',')
+                if (occupied.has(key)) continue
+                const rotation = Math.atan2(outward.x, outward.z)
+                this.decorations.push({ name, position: { x: pos.x, y: pos.y, z: pos.z }, rotation })
+                occupied.add(key)
+            }
+        }
     }
 
     connectAll(parts: RoadPart[]): void {
@@ -351,6 +382,10 @@ class Road {
 
     getPath(): LinkedRoadPart[] {
         return this.path
+    }
+
+    getDecorations(): RoadDecoration[] {
+        return this.decorations
     }
 }
 

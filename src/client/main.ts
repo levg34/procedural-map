@@ -22,7 +22,7 @@ import {
     type BeaconLightPlacement,
     type HeadlightPlacement
 } from '../data/lights'
-import type { RoadModel, RoadSegment } from '../data/models'
+import type { RoadDecoration, RoadModel, RoadSegment } from '../data/models'
 import { isTrafficVehicleExcluded } from '../data/vehicles'
 import { getRoad, getRoadParts, getRoadQuery, getRoadShowcase, getVehicleModels } from './api'
 import { createCameraRig } from './cameraRig'
@@ -266,15 +266,26 @@ function addParkedVehicles(road: RoadSegment[], vehicleModels: LoadedTrafficVehi
     return beaconLights
 }
 
+function addRoadDecorations(decorations: RoadDecoration[]): void {
+    for (const deco of decorations) {
+        const model = loadedRoadModels.find((m) => m.name === deco.name)
+        if (!model) continue
+        const pos = new Vector3(deco.position.x, deco.position.y, deco.position.z)
+        addCenteredProp(model, pos, deco.rotation ?? 0)
+    }
+}
+
 void initializeAmbulance()
 
 async function initializeRoad(): Promise<void> {
     try {
-        const [roadModels, availableVehicleModels, road] = await Promise.all([
+        const [roadModels, availableVehicleModels, roadResp] = await Promise.all([
             getRoadParts(),
             getVehicleModels(),
             isShowcase ? getRoadShowcase() : getRoad(roadLength, roadSeed)
         ])
+        const road = roadResp.path
+        const decorations = roadResp.decorations ?? []
         const [roadCatalog, loadedVehicleModels] = await Promise.all([
             Promise.all(
                 roadModels.map(async (roadModel) => ({
@@ -321,6 +332,7 @@ async function initializeRoad(): Promise<void> {
             simulation.addParkedBeaconLights(addParkedVehicles(road, loadedVehicleModels))
         } else {
             addRoadsideLamps(centerPath, road)
+            addRoadDecorations(decorations)
         }
         simulation.start(centerPath, reversePath, trafficVehicleModels)
         road.forEach((segment: RoadSegment) => {

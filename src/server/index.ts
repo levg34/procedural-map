@@ -33,7 +33,7 @@ api.get(
     '/road/showcase',
     asyncRoute(async (_req, res) => {
         const road = await Road.buildShowcase()
-        res.json(road.getPath())
+        res.json({ path: road.getPath(), decorations: [] })
     })
 )
 
@@ -48,7 +48,7 @@ api.get(
 
         const seed = parseSeed(req.query.seed) ?? Math.floor(Math.random() * 2 ** 32)
         const road = await Road.build(length, seed)
-        res.json(road.getPath())
+        res.json({ path: road.getPath(), decorations: road.getDecorations() })
     })
 )
 

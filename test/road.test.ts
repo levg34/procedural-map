@@ -177,6 +177,10 @@ describe('Road', () => {
                 'No-entry tile should occupy an unused intersection branch'
             )
         })
+        it('should not add decorations in showcase', async () => {
+            const road = await Road.buildShowcase()
+            assert.deepStrictEqual(road.decorations, [])
+        })
     })
     describe('get part by name', () => {
         const partName = 'road_crossing'
@@ -248,6 +252,16 @@ describe('Road', () => {
         it('should contain turns', () => {
             assert.ok(road.path.map((e) => e.name).filter((e) => roadTypes.turn.for.includes(e)).length > 0)
         })
+        it('should include decoration caps for free connectors (normal road)', () => {
+            assert.ok(Array.isArray(road.decorations))
+            const allowed = new Set(['construction_barrier', 'construction_pylon', 'construction_light'])
+            for (const deco of road.decorations) {
+                assert.ok(allowed.has(deco.name), `unexpected decoration name: ${deco.name}`)
+                assert.equal(typeof deco.position.x, 'number')
+                assert.equal(typeof deco.position.y, 'number')
+                assert.equal(typeof deco.position.z, 'number')
+            }
+        })
     })
     describe('seeded road variants', () => {
         it('should produce identical roads for the same seed', async () => {
@@ -271,6 +285,7 @@ describe('Road', () => {
                 assert.strictEqual(road.path.filter((part) => part.name === 'road_roundabout').length, 1)
                 assert.ok(createRoadCenterPath(road.path).getLength() > 0)
                 assert.ok(createRoadCenterPath(road.path, true).getLength() > 0)
+                assert.ok(Array.isArray(road.decorations))
             }
         })
     })

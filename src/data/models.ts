@@ -30,3 +30,9 @@ export type RoadSegment = {
     usedDirections: RoadVector[]
     connectionOffsets: RoadVector[]
 }
+
+export type RoadDecoration = {
+    name: string
+    position: RoadVector
+    rotation?: number
+}
