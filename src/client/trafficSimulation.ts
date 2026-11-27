@@ -82,9 +82,10 @@ function toggleBeacons(lights: PointLight[]): void {
 }
 
 /** Encodes the full light rig `prepareVehicle` would attach: spotlight count and
- * placement, plus every beacon placement (hidden ones start blinking too). Only
- * models with the same key can swap, so positions/colors stay correct and the
- * Three.js shader cache key is unchanged. */
+ * placement, plus every beacon placement (hidden ones start blinking too) in a
+ * canonical order, so authoring order alone doesn't block a swap. Only models
+ * with the same key can swap, keeping positions/colors correct and the Three.js
+ * shader cache key unchanged. */
 function getLightConfigKey(model: LoadedTrafficVehicleModel): string {
     const spotLights = hasHeadlights(model.model.scene) ? 2 : 0
     const headlights = headlightPlacements[model.name] ?? defaultHeadlightPlacement
@@ -94,6 +95,7 @@ function getLightConfigKey(model: LoadedTrafficVehicleModel): string {
             (placement) =>
                 `${placement.x},${placement.y},${placement.z},${placement.color},${placement.initiallyVisible ? 1 : 0}`
         )
+        .sort()
         .join(';')
     return `${spotLights}|${headlightKey}|${beaconKey}`
 }

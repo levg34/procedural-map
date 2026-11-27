@@ -8,6 +8,7 @@ import {
     type TrafficSimulationOptions
 } from '../src/client/trafficSimulation'
 import type { RoadPath } from '../src/client/vehiclePath'
+import { emergencyBeaconPlacements } from '../src/data/lights'
 import { doubleEquals } from './testUtils'
 
 const laneOffset = 0.16
@@ -559,6 +560,51 @@ describe('traffic simulation', () => {
         simulation.update(1.05)
 
         assert.strictEqual(visualName(), 'ambulance')
+    })
+
+    it('swaps models whose beacon placements differ only in order', () => {
+        const red = { x: -0.2, y: 1, z: 0, color: 0xff0000, initiallyVisible: true }
+        const blue = { x: 0.2, y: 1, z: 0, color: 0x0000ff, initiallyVisible: false }
+        emergencyBeaconPlacements.orderA = [red, blue]
+        emergencyBeaconPlacements.orderB = [blue, red]
+        const orderA = vehicleModel('orderA')
+        const orderB = vehicleModel('orderB')
+        orderA.model.scene.name = 'orderA'
+        orderB.model.scene.name = 'orderB'
+
+        try {
+            let vehicleObject: Group | undefined
+            let randomCalls = 0
+            const randomValues = [0, 0, 0.5]
+            const { simulation } = createSetup({
+                reverseTrafficVehicleCount: 0,
+                forwardTrafficVehicleCount: 1,
+                speed: () => 5,
+                weight: () => 1,
+                random: () => randomValues[randomCalls++] ?? 0.5,
+                createVehicle: (model) => {
+                    const object = new Group()
+                    const visual = new Group()
+                    visual.name = model.name
+                    object.add(visual)
+                    vehicleObject = object
+                    return { object, visual, beaconLights: [] }
+                }
+            })
+            simulation.start(straightPath(), straightPath(10, 0), [orderA, orderB])
+
+            const visualName = (): string | undefined =>
+                vehicleObject?.children.find((child): child is Group => child instanceof Group)?.name
+
+            assert.strictEqual(visualName(), 'orderA')
+
+            simulation.update(1.05)
+
+            assert.strictEqual(visualName(), 'orderB')
+        } finally {
+            delete emergencyBeaconPlacements.orderA
+            delete emergencyBeaconPlacements.orderB
+        }
     })
 
     it('keeps the visual when no other model shares its light config', () => {
