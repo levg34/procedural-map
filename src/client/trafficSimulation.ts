@@ -1,10 +1,12 @@
-import { Group, PointLight, Scene, Vector3 } from 'three'
+import { Group, Object3D, PointLight, Scene, Vector3 } from 'three'
 import type { GLTF } from 'three/addons/loaders/GLTFLoader.js'
+import { emergencyBeaconPlacements } from '../data/lights'
 import type { TrafficVehicleModel } from '../data/models'
 import { getTrafficVehicleSpeed, getTrafficVehicleWeight } from '../data/vehicles'
+import { vehicleYOffset } from './vehicleConstants'
 import { getLanePosition, getTurnaroundPose, type RoadPath } from './vehiclePath'
+import { hasHeadlights } from './vehicleLights'
 
-const vehicleYOffset = 0.02
 const blinkIntervalSeconds = 0.5
 const defaultMinimumGap = 1
 const defaultAmbulanceSpeed = 2
@@ -19,6 +21,9 @@ export type LoadedTrafficVehicleModel = TrafficVehicleModel & {
 
 export type PreparedVehicle = {
     object: Group
+    // Optional so simple test doubles can omit it; the real factory separates
+    // the swappable GLB clone from the light-bearing object.
+    visual?: Object3D
     beaconLights: PointLight[]
 }
 
@@ -50,6 +55,8 @@ type TrafficVehicle = PreparedVehicle & {
     progress: number
     desiredSpeed: number
     actualSpeed: number
+    modelName: string
+    lightSignature: string
 }
 
 type Leader = {
@@ -72,6 +79,41 @@ function toggleBeacons(lights: PointLight[]): void {
     for (const light of lights) {
         light.visible = !light.visible
     }
+}
+
+/** Counts the lights `prepareVehicle` would attach: 2 spotlights for cars with
+ * headlight materials, plus the initially visible beacon point lights. Swapping
+ * models with the same signature keeps Three.js's shader cache key unchanged. */
+function getLightSignature(model: LoadedTrafficVehicleModel): string {
+    const spotLights = hasHeadlights(model.model.scene) ? 2 : 0
+    const pointLights = (emergencyBeaconPlacements[model.name] ?? []).filter(
+        (placement) => placement.initiallyVisible
+    ).length
+    return `${pointLights}:${spotLights}`
+}
+
+function buildModelGroups(models: readonly LoadedTrafficVehicleModel[]): Map<string, LoadedTrafficVehicleModel[]> {
+    const groups = new Map<string, LoadedTrafficVehicleModel[]>()
+    for (const model of models) {
+        const signature = getLightSignature(model)
+        const group = groups.get(signature) ?? []
+        group.push(model)
+        groups.set(signature, group)
+    }
+    return groups
+}
+
+function pickWeighted<T>(items: readonly T[], weight: (item: T) => number, random: () => number): T {
+    const weighted = items.map((item) => ({ item, weight: Math.max(0, weight(item)) }))
+    const total = weighted.reduce((sum, entry) => sum + entry.weight, 0)
+    if (total <= 0) return weighted[0].item
+
+    let pick = random() * total
+    for (const entry of weighted) {
+        pick -= entry.weight
+        if (pick < 0) return entry.item
+    }
+    return weighted[weighted.length - 1].item
 }
 
 /** Weighted sampling without replacement: every pick is proportional to the
@@ -152,6 +194,7 @@ export function createTrafficSimulation(options: TrafficSimulationOptions): Traf
     let reversePath: RoadPath | undefined
     let vehicleModels: LoadedTrafficVehicleModel[] = []
     let modelDeck: LoadedTrafficVehicleModel[] = []
+    let modelGroups = new Map<string, LoadedTrafficVehicleModel[]>()
     let ambulanceProgress = 0
     let ambulanceReturning = false
     let ambulanceTurnProgress: number | undefined
@@ -171,7 +214,15 @@ export function createTrafficSimulation(options: TrafficSimulationOptions): Traf
         const vehicle = createVehicle(model)
         scene.add(vehicle.object)
         const desiredSpeed = speed(model)
-        return { ...vehicle, path, progress, desiredSpeed, actualSpeed: desiredSpeed }
+        return {
+            ...vehicle,
+            path,
+            progress,
+            desiredSpeed,
+            actualSpeed: desiredSpeed,
+            modelName: model.name,
+            lightSignature: getLightSignature(model)
+        }
     }
 
     // During a U-turn the ambulance is already heading into the other lane.
@@ -216,7 +267,23 @@ export function createTrafficSimulation(options: TrafficSimulationOptions): Traf
 
     function respawnVehicle(vehicle: TrafficVehicle): void {
         // Reuse the same object and lights: adding/removing lights changes the
-        // shader program cache key and freezes the page on recompilation.
+        // shader program cache key and freezes the page on recompilation. Only
+        // the GLB clone is replaced, and only by a model with the same signature.
+        const candidates = (modelGroups.get(vehicle.lightSignature) ?? []).filter(
+            (model) => model.name !== vehicle.modelName
+        )
+        if (vehicle.visual && candidates.length > 0) {
+            const replacement = pickWeighted(candidates, weight, random)
+            const visual = replacement.model.scene.clone()
+            visual.position.copy(vehicle.visual.position)
+            visual.rotation.copy(vehicle.visual.rotation)
+            visual.scale.copy(vehicle.visual.scale)
+            vehicle.visual.removeFromParent()
+            vehicle.object.add(visual)
+            vehicle.visual = visual
+            vehicle.modelName = replacement.name
+        }
+
         vehicle.progress = clearProgress(
             vehicle.path,
             0,
@@ -373,6 +440,7 @@ export function createTrafficSimulation(options: TrafficSimulationOptions): Traf
             centerPath = center
             reversePath = reverse
             vehicleModels = models
+            modelGroups = buildModelGroups(models)
 
             // Keep progress 0 on both paths clear for the ambulance.
             for (let index = 0; index < reverseTrafficVehicleCount; index++) {

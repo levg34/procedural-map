@@ -409,4 +409,73 @@ describe('traffic simulation', () => {
             [0, 10]
         )
     })
+
+    it('swaps only the visual clone on respawn when light signatures match', () => {
+        const sedan = vehicleModel('sedan')
+        sedan.model.scene.name = 'sedan'
+        const van = vehicleModel('van')
+        van.model.scene.name = 'van'
+        let vehicleObject: Group | undefined
+        let beacon: PointLight | undefined
+        const { scene, simulation } = createSetup({
+            reverseTrafficVehicleCount: 0,
+            forwardTrafficVehicleCount: 1,
+            speed: () => 5,
+            random: () => 0,
+            weight: () => 1,
+            createVehicle: (model) => {
+                const object = new Group()
+                const visual = new Group()
+                visual.name = model.name
+                object.add(visual)
+                vehicleObject = object
+                beacon = new PointLight()
+                object.add(beacon)
+                return { object, visual, beaconLights: [beacon] }
+            }
+        })
+        simulation.start(straightPath(), straightPath(10, 0), [sedan, van])
+
+        const firstBeacon = beacon
+        const visualNames = (): string[] =>
+            (vehicleObject?.children ?? [])
+                .filter((child): child is Group => child instanceof Group)
+                .map((child) => child.name)
+        assert.deepStrictEqual(visualNames(), ['sedan'])
+
+        // Just long enough to cross the end once and respawn a single time.
+        simulation.update(1.05)
+
+        assert.deepStrictEqual(visualNames(), ['van'])
+        assert.strictEqual(firstBeacon?.parent, scene.children[0])
+        assert.strictEqual(scene.children[0]?.children.filter((child) => child instanceof PointLight).length, 1)
+    })
+
+    it('keeps the visual when no other model shares its light signature', () => {
+        let vehicleObject: Group | undefined
+        const { simulation } = createSetup({
+            reverseTrafficVehicleCount: 0,
+            forwardTrafficVehicleCount: 1,
+            speed: () => 5,
+            createVehicle: (model) => {
+                const object = new Group()
+                const visual = new Group()
+                visual.name = model.name
+                object.add(visual)
+                vehicleObject = object
+                return { object, visual, beaconLights: [] }
+            }
+        })
+        simulation.start(straightPath(), straightPath(10, 0), [vehicleModel('sedan'), vehicleModel('police')])
+
+        const visualNames = (): string[] =>
+            (vehicleObject?.children ?? [])
+                .filter((child): child is Group => child instanceof Group)
+                .map((child) => child.name)
+        assert.deepStrictEqual(visualNames(), ['sedan'])
+
+        simulation.update(1.05)
+
+        assert.deepStrictEqual(visualNames(), ['sedan'])
+    })
 })

@@ -1,4 +1,4 @@
-import express from 'express'
+import express, { type NextFunction, type Request, type RequestHandler, type Response } from 'express'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { Road } from './roadBuilder'
@@ -15,65 +15,63 @@ function parseSeed(value: unknown): number | undefined {
     return Number.isInteger(seed) && seed >= 0 ? seed : undefined
 }
 
+type AsyncRequestHandler = (req: Request, res: Response, next: NextFunction) => Promise<unknown>
+
+const asyncRoute =
+    (handler: AsyncRequestHandler): RequestHandler =>
+    (req, res, next) => {
+        handler(req, res, next).catch(next)
+    }
+
 app.use(express.static(join(rootDirectory, 'public')))
 
 app.get(['/', '/showcase'], (_req, res) => {
     res.sendFile(join(rootDirectory, 'public', 'index.html'))
 })
 
-api.get('/road/showcase', async (_req, res) => {
-    try {
+api.get(
+    '/road/showcase',
+    asyncRoute(async (_req, res) => {
         const road = await Road.buildShowcase()
         res.json(road.getPath())
-    } catch (error) {
-        console.error(error)
-        res.status(500).json({ error: error instanceof Error ? error.message : String(error) })
-    }
-})
+    })
+)
 
-api.get('/road/:length', async (req, res) => {
-    const length = Number(req.params.length)
-    if (!Number.isInteger(length) || length < 2) {
-        res.status(400).json({ error: 'Road length must be an integer of at least 2' })
-        return
-    }
+api.get(
+    '/road/:length',
+    asyncRoute(async (req, res) => {
+        const length = Number(req.params.length)
+        if (!Number.isInteger(length) || length < 2) {
+            res.status(400).json({ error: 'Road length must be an integer of at least 2' })
+            return
+        }
 
-    try {
         const seed = parseSeed(req.query.seed) ?? Math.floor(Math.random() * 2 ** 32)
         const road = await Road.build(length, seed)
         res.json(road.getPath())
-    } catch (error) {
-        console.error(error)
-        res.status(500).json({ error: error instanceof Error ? error.message : String(error) })
-    }
-})
+    })
+)
 
-api.get('/road_parts', async (_req, res) => {
-    try {
+api.get(
+    '/road_parts',
+    asyncRoute(async (_req, res) => {
         res.json(await getRoadParts())
-    } catch (error) {
-        console.error(error)
-        res.status(500).json({ error: error instanceof Error ? error.message : String(error) })
-    }
-})
+    })
+)
 
-api.get('/traffic_vehicles', async (_req, res) => {
-    try {
+api.get(
+    '/traffic_vehicles',
+    asyncRoute(async (_req, res) => {
         res.json(await getTrafficVehicleModels())
-    } catch (error) {
-        console.error(error)
-        res.status(500).json({ error: error instanceof Error ? error.message : String(error) })
-    }
-})
+    })
+)
 
-api.get('/vehicles', async (_req, res) => {
-    try {
+api.get(
+    '/vehicles',
+    asyncRoute(async (_req, res) => {
         res.json(await getAllVehicleModels())
-    } catch (error) {
-        console.error(error)
-        res.status(500).json({ error: error instanceof Error ? error.message : String(error) })
-    }
-})
+    })
+)
 
 app.get('/model/:type/:model', (req, res, next) => {
     const { model, type } = req.params
@@ -99,6 +97,11 @@ app.get('/model/:type/:model', (req, res, next) => {
 })
 
 app.use('/api', api)
+
+app.use((error: unknown, _req: Request, res: Response, _next: NextFunction) => {
+    console.error(error)
+    res.status(500).json({ error: error instanceof Error ? error.message : String(error) })
+})
 
 app.listen(port, () => {
     console.log(`App listening at http://localhost:${port}`)

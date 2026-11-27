@@ -2,19 +2,16 @@ import {
     AmbientLight,
     Box3,
     DirectionalLight,
+    Group,
     Mesh,
     MeshStandardMaterial,
     Object3D,
-    PerspectiveCamera,
     PointLight,
     Scene,
     SpotLight,
     Vector3,
-    WebGLRenderer,
-    type Group
+    WebGLRenderer
 } from 'three'
-import { FlyControls } from 'three/addons/controls/FlyControls.js'
-import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { CSS2DObject, CSS2DRenderer } from 'three/addons/renderers/CSS2DRenderer.js'
 import { GLTFLoader, type GLTF } from 'three/addons/loaders/GLTFLoader.js'
 import {
@@ -28,9 +25,11 @@ import {
 import type { RoadModel, RoadSegment } from '../data/models'
 import { isTrafficVehicleExcluded } from '../data/vehicles'
 import { getRoad, getRoadParts, getRoadQuery, getRoadShowcase, getVehicleModels } from './api'
+import { createCameraRig } from './cameraRig'
 import { createGrassGround } from './ground'
 import { getRoadBounds } from './roadBounds'
 import { createRoadPreview } from './roadPreview'
+import { modelZOffset, vehicleScale, vehicleYOffset } from './vehicleConstants'
 import {
     createShowcasePlacements,
     isShowcaseDisplayModel,
@@ -60,8 +59,6 @@ let loadedRoadModels: LoadedRoadModel[] = []
 
 const scene = new Scene()
 const roadPreview = createRoadPreview(scene, () => loadedRoadModels)
-const camera = new PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000)
-camera.position.set(5, 5, 5)
 
 const renderer = new WebGLRenderer()
 renderer.setSize(window.innerWidth, window.innerHeight)
@@ -77,23 +74,22 @@ if (labelRenderer) {
     document.body.appendChild(labelRenderer.domElement)
 }
 
-const controls = new OrbitControls(camera, renderer.domElement)
-const flyControls = new FlyControls(camera, renderer.domElement)
-flyControls.movementSpeed = 0
-// OrbitControls owns rotation; FlyControls supplies translation only.
-flyControls.rollSpeed = 0
-flyControls.dragToLook = true
-
-let cameraMode: 'follow' | 'free' = 'follow'
-const cameraFollowOffset = camera.position.clone()
+const cameraRig = createCameraRig({
+    domElement: renderer.domElement,
+    width: window.innerWidth,
+    height: window.innerHeight,
+    showHint: isShowcase
+})
 
 scene.add(new AmbientLight(0x404040))
 scene.add(new DirectionalLight(0xffffff, 0.5))
 
 const createVehicle: VehicleFactory = (model) => {
-    const vehicle = model.model.scene.clone()
-    const beaconLights = prepareVehicle(vehicle, model.name)
-    return { object: vehicle, beaconLights }
+    const object = new Group()
+    const visual = model.model.scene.clone()
+    object.add(visual)
+    const beaconLights = prepareVehicle(object, model.name)
+    return { object, visual, beaconLights }
 }
 
 const simulation = createTrafficSimulation({
@@ -140,49 +136,6 @@ function toggleLabels(): void {
     labelRenderer.domElement.style.display = labelsVisible ? '' : 'none'
 }
 
-function updateCameraHint(hint: HTMLDivElement | undefined): void {
-    if (!hint) return
-    hint.textContent =
-        cameraMode === 'follow'
-            ? 'Camera: following ambulance · C: free-fly · L: labels'
-            : 'Camera: free-fly · WASD move · R/F up/down · drag orbit · wheel zoom · C: follow · L: labels'
-}
-
-function createCameraHint(): HTMLDivElement | undefined {
-    if (!isShowcase) return undefined
-
-    const hint = document.createElement('div')
-    hint.style.position = 'fixed'
-    hint.style.bottom = '12px'
-    hint.style.left = '12px'
-    hint.style.padding = '7px 10px'
-    hint.style.borderRadius = '4px'
-    hint.style.background = 'rgba(0, 0, 0, 0.6)'
-    hint.style.color = 'white'
-    hint.style.font = '12px sans-serif'
-    hint.style.pointerEvents = 'none'
-    document.body.appendChild(hint)
-    updateCameraHint(hint)
-    return hint
-}
-
-const cameraHint = createCameraHint()
-
-function toggleCameraMode(): void {
-    const ambulancePosition = ambulance?.position ?? new Vector3()
-    if (cameraMode === 'follow') {
-        cameraFollowOffset.copy(camera.position).sub(ambulancePosition)
-        cameraMode = 'free'
-    } else {
-        cameraMode = 'follow'
-        camera.position.copy(ambulancePosition).add(cameraFollowOffset)
-        controls.target.copy(ambulancePosition)
-    }
-    flyControls.movementSpeed = cameraMode === 'free' ? 3 : 0
-    previousAmbulancePosition = undefined
-    updateCameraHint(cameraHint)
-}
-
 let ambulance: Group | undefined
 
 async function initializeAmbulance(): Promise<void> {
@@ -224,7 +177,7 @@ function addBeaconLights(vehicle: Group, placements: BeaconLightPlacement[]): Po
 }
 
 function prepareVehicle(vehicle: Group, modelName: string): PointLight[] {
-    vehicle.scale.set(0.2, 0.2, 0.2)
+    vehicle.scale.setScalar(vehicleScale)
     addVehicleLights(vehicle, headlightPlacements[modelName] ?? defaultHeadlightPlacement)
     return addBeaconLights(vehicle, emergencyBeaconPlacements[modelName] ?? [])
 }
@@ -243,8 +196,8 @@ function addStreetLightGlow(prop: Group, name: string): void {
 
     for (const head of streetLightHeads[name] ?? []) {
         const light = new PointLight(0xffe0a8, 2.5, 1.8, 2)
-        // Head coordinates are centered; the GLB root is offset by -0.75.
-        light.position.set(head.x, head.y, head.z + 0.75)
+        // Head coordinates are centered; undo the GLB root's Z offset.
+        light.position.set(head.x, head.y, head.z - modelZOffset)
         prop.add(light)
     }
 }
@@ -257,7 +210,7 @@ function getModelFootprint(model: GLTF): number {
 function addCenteredProp(model: LoadedRoadModel, position: Vector3, rotation: number): void {
     // The GLB node pushes geometry 0.75 forward; center it on the placement.
     const prop = model.model.scene.clone()
-    prop.position.z = -0.75
+    prop.position.z = modelZOffset
     addStreetLightGlow(prop, model.name)
 
     const holder = new Object3D()
@@ -300,7 +253,7 @@ function addParkedVehicles(road: RoadSegment[], vehicleModels: LoadedTrafficVehi
         const vehicle = model.model.scene.clone()
         beaconLights.push(...prepareVehicle(vehicle, model.name))
         vehicle.position.copy(placement.position)
-        vehicle.position.y += 0.02
+        vehicle.position.y += vehicleYOffset
         vehicle.rotation.y = placement.rotation
         scene.add(vehicle)
         addModelLabel(model.name, placement.position)
@@ -372,7 +325,7 @@ async function initializeRoad(): Promise<void> {
 
             const roadPart = new Object3D()
             const roadPartModel = roadModel.model.scene.clone()
-            roadPartModel.position.z = -0.75
+            roadPartModel.position.z = modelZOffset
             roadPart.add(roadPartModel)
             if (segment.rotation !== undefined) {
                 roadPart.rotation.y = segment.rotation
@@ -389,8 +342,6 @@ async function initializeRoad(): Promise<void> {
 void initializeRoad()
 
 let lastFrameTime = performance.now()
-let previousAmbulancePosition: Vector3 | undefined
-const flyMovement = new Vector3()
 function animate(timestamp = performance.now()): void {
     requestAnimationFrame(animate)
 
@@ -398,25 +349,10 @@ function animate(timestamp = performance.now()): void {
     lastFrameTime = timestamp
 
     simulation.update(deltaTime)
+    cameraRig.update(deltaTime, ambulance?.position)
 
-    if (ambulance && cameraMode === 'follow' && previousAmbulancePosition) {
-        const movement = ambulance.position.clone().sub(previousAmbulancePosition)
-        camera.position.add(movement)
-        controls.target.add(movement)
-    }
-    if (ambulance) previousAmbulancePosition = ambulance.position.clone()
-
-    flyMovement.copy(camera.position)
-    flyControls.update(deltaTime)
-    if (cameraMode === 'free') {
-        // Keep the orbit target with the camera so OrbitControls can still own rotation.
-        flyMovement.subVectors(camera.position, flyMovement)
-        controls.target.add(flyMovement)
-    }
-
-    controls.update()
-    renderer.render(scene, camera)
-    labelRenderer?.render(scene, camera)
+    renderer.render(scene, cameraRig.camera)
+    labelRenderer?.render(scene, cameraRig.camera)
 }
 
 animate()
@@ -424,13 +360,12 @@ animate()
 document.addEventListener('keydown', (event) => {
     const key = event.key.toLowerCase()
     if (key === ' ') roadPreview.showNext()
-    if (isShowcase && key === 'c' && !event.repeat) toggleCameraMode()
+    if (isShowcase && key === 'c' && !event.repeat) cameraRig.toggleMode()
     if (isShowcase && key === 'l' && !event.repeat) toggleLabels()
 })
 
 window.addEventListener('resize', () => {
-    camera.aspect = window.innerWidth / window.innerHeight
-    camera.updateProjectionMatrix()
+    cameraRig.resize(window.innerWidth, window.innerHeight)
     renderer.setSize(window.innerWidth, window.innerHeight)
     labelRenderer?.setSize(window.innerWidth, window.innerHeight)
 })

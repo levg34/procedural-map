@@ -11,5 +11,5 @@
         "types": ["node"],
         "forceConsistentCasingInFileNames": true
     },
-    "include": ["src/**/*.ts", "test/**/*.ts", "vite.config.ts"]
+    "include": ["src/**/*.ts", "test/**/*.ts", "vite.config.ts", "vitest.config.ts"]
 }
