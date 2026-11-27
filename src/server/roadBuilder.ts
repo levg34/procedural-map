@@ -323,17 +323,33 @@ class Road {
             if (part.usedDirections.length === 0) continue
             const freeDirections = part.getAvailableDirections()
             for (const freeDir of freeDirections) {
-                if (part === first && first.usedDirections.length > 0 && freeDir.clone().sub(first.usedDirections[0]).length() < 0.0000001) continue
-                if (part === last && last.usedDirections.length > 0 && freeDir.clone().sub(last.usedDirections[0]).length() < 0.0000001) continue
+                if (
+                    part === first &&
+                    first.usedDirections.length > 0 &&
+                    freeDir.clone().sub(first.usedDirections[0]).length() < 0.0000001
+                )
+                    continue
+                if (
+                    part === last &&
+                    last.usedDirections.length > 0 &&
+                    freeDir.clone().sub(last.usedDirections[0]).length() < 0.0000001
+                )
+                    continue
 
                 const dirKey = freeDir.toArray().join(',')
                 const pickIndex = Math.floor(this.random() * decorationNames.length)
                 const name = decorationNames[pickIndex % decorationNames.length]
                 const outward = freeDir.clone().normalize()
-                const pos = part.position.clone().add(part.getConnectionOffset(freeDir)).add(outward.clone().multiplyScalar(0.5))
+                const pos = part.position
+                    .clone()
+                    .add(part.getConnectionOffset(freeDir))
+                    .add(outward.clone().multiplyScalar(0.5))
                 const key = pos.toArray().join(',')
                 if (occupied.has(key)) continue
-                const rotation = Math.atan2(outward.x, outward.z)
+                let rotation = Math.atan2(outward.x, outward.z)
+                if (name === 'construction_barrier' || name === 'construction_light') {
+                    rotation += Math.PI / 2
+                }
                 this.decorations.push({ name, position: { x: pos.x, y: pos.y, z: pos.z }, rotation })
                 occupied.add(key)
             }
