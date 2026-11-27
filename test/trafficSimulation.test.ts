@@ -417,11 +417,14 @@ describe('traffic simulation', () => {
         van.model.scene.name = 'van'
         let vehicleObject: Group | undefined
         let beacon: PointLight | undefined
+        let randomCalls = 0
         const { scene, simulation } = createSetup({
             reverseTrafficVehicleCount: 0,
             forwardTrafficVehicleCount: 1,
             speed: () => 5,
-            random: () => 0,
+            // The first two draws build the initial deck (sedan, van); the
+            // third picks van from the full group at respawn.
+            random: () => (randomCalls++ < 2 ? 0 : 0.5),
             weight: () => 1,
             createVehicle: (model) => {
                 const object = new Group()
@@ -449,6 +452,55 @@ describe('traffic simulation', () => {
         assert.deepStrictEqual(visualNames(), ['van'])
         assert.strictEqual(firstBeacon?.parent, scene.children[0])
         assert.strictEqual(scene.children[0]?.children.filter((child) => child instanceof PointLight).length, 1)
+    })
+
+    it('preserves configured weights across respawns instead of alternating', () => {
+        const sedan = vehicleModel('sedan')
+        sedan.model.scene.name = 'sedan'
+        const van = vehicleModel('van')
+        van.model.scene.name = 'van'
+        const weights: Record<string, number> = { sedan: 19, van: 1 }
+        let vehicleObject: Group | undefined
+        let randomCalls = 0
+        // Initial deck: sedan, van. Then one draw per respawn below.
+        const randomValues = [0, 0, 0.5, 0.99, 0.99, 0.5]
+        const { simulation } = createSetup({
+            reverseTrafficVehicleCount: 0,
+            forwardTrafficVehicleCount: 1,
+            speed: () => 5,
+            weight: (model) => weights[model.name] ?? 1,
+            random: () => randomValues[randomCalls++] ?? 0.5,
+            createVehicle: (model) => {
+                const object = new Group()
+                const visual = new Group()
+                visual.name = model.name
+                object.add(visual)
+                vehicleObject = object
+                return { object, visual, beaconLights: [] }
+            }
+        })
+        simulation.start(straightPath(), straightPath(10, 0), [sedan, van])
+
+        const visualName = (): string | undefined =>
+            vehicleObject?.children.find((child): child is Group => child instanceof Group)?.name
+
+        assert.strictEqual(visualName(), 'sedan')
+
+        // sedan holds 19/20 of the group: an ordinary draw keeps it.
+        simulation.update(2)
+        assert.strictEqual(visualName(), 'sedan')
+
+        // Only a draw above 19/20 switches to the rare model.
+        simulation.update(2)
+        assert.strictEqual(visualName(), 'van')
+
+        // van holds 1/20: it needs a draw in that last slice to stay van.
+        simulation.update(2)
+        assert.strictEqual(visualName(), 'van')
+
+        // A typical draw sends it back to the common model.
+        simulation.update(2)
+        assert.strictEqual(visualName(), 'sedan')
     })
 
     it('keeps the visual when no other model shares its light signature', () => {

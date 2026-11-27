@@ -269,22 +269,25 @@ export function createTrafficSimulation(options: TrafficSimulationOptions): Traf
         // Reuse the same object and lights: adding/removing lights changes the
         // shader program cache key and freezes the page on recompilation. Only
         // the GLB clone is replaced, and only by a model with the same signature.
-        const candidates = (modelGroups.get(vehicle.lightSignature) ?? []).filter(
-            (model) => model.name !== vehicle.modelName
-        )
+        // Draw from the whole signature group, including the current model: a
+        // self-loop keeps the stationary distribution equal to `weight`, whereas
+        // excluding it forces alternation in two-model groups and skews rarities.
+        const candidates = modelGroups.get(vehicle.lightSignature) ?? []
         if (vehicle.visual && candidates.length > 0) {
             const replacement = pickWeighted(candidates, weight, random)
-            const visual = replacement.model.scene.clone()
-            visual.position.copy(vehicle.visual.position)
-            visual.rotation.copy(vehicle.visual.rotation)
-            visual.scale.copy(vehicle.visual.scale)
-            vehicle.visual.removeFromParent()
-            vehicle.object.add(visual)
-            vehicle.visual = visual
-            vehicle.modelName = replacement.name
-            const desiredSpeed = speed(replacement)
-            vehicle.desiredSpeed = desiredSpeed
-            vehicle.actualSpeed = desiredSpeed
+            if (replacement.name !== vehicle.modelName) {
+                const visual = replacement.model.scene.clone()
+                visual.position.copy(vehicle.visual.position)
+                visual.rotation.copy(vehicle.visual.rotation)
+                visual.scale.copy(vehicle.visual.scale)
+                vehicle.visual.removeFromParent()
+                vehicle.object.add(visual)
+                vehicle.visual = visual
+                vehicle.modelName = replacement.name
+                const desiredSpeed = speed(replacement)
+                vehicle.desiredSpeed = desiredSpeed
+                vehicle.actualSpeed = desiredSpeed
+            }
         }
 
         vehicle.progress = clearProgress(
