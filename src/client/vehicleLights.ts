@@ -27,6 +27,15 @@ export function enableHeadlightGlow(vehicle: Group): void {
     }
 }
 
+/** Enables both emissive glows. Both helpers already no-op when the named
+ * materials are absent. Three.js clones share material instances with their
+ * source, so calling this on a throwaway clone also prepares the loaded model
+ * for every future clone (including respawn swaps). */
+export function enableVehicleGlow(vehicle: Group): void {
+    enableTailLightGlow(vehicle)
+    enableHeadlightGlow(vehicle)
+}
+
 export function hasTailLights(vehicle: Group): boolean {
     return getNamedMaterials(vehicle, tailLightMaterialName).length > 0
 }

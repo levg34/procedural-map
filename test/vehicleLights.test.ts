@@ -3,7 +3,13 @@ import { readdirSync, readFileSync } from 'node:fs'
 import { BoxGeometry, Group, Mesh, MeshStandardMaterial } from 'three'
 import { GLTFLoader, type GLTF } from 'three/addons/loaders/GLTFLoader.js'
 import { describe, it } from 'vitest'
-import { enableHeadlightGlow, enableTailLightGlow, hasHeadlights, hasTailLights } from '../src/client/vehicleLights'
+import {
+    enableHeadlightGlow,
+    enableTailLightGlow,
+    enableVehicleGlow,
+    hasHeadlights,
+    hasTailLights
+} from '../src/client/vehicleLights'
 
 async function loadVehicle(name: string): Promise<Group> {
     const data = readFileSync(`models/cars/${name}.glb`)
@@ -32,6 +38,31 @@ describe('vehicle lights', () => {
         plainVehicle.add(new Mesh(new BoxGeometry(), new MeshStandardMaterial()))
         assert.equal(hasHeadlights(plainVehicle), false)
         assert.equal(hasTailLights(plainVehicle), false)
+    })
+
+    it('enables only tail glow when a vehicle has no headlight material', () => {
+        const tailLightMaterial = new MeshStandardMaterial({ name: 'lightBack' })
+        const vehicle = new Group()
+        vehicle.add(new Mesh(new BoxGeometry(), tailLightMaterial))
+
+        enableVehicleGlow(vehicle)
+
+        assert.equal(tailLightMaterial.emissive.getHex(), 0xff3030)
+        assert.equal(tailLightMaterial.emissiveIntensity, 1.5)
+    })
+
+    it('glows a loaded model through a throwaway clone, as respawn swaps do', () => {
+        const headlightMaterial = new MeshStandardMaterial({ name: 'lightFront' })
+        const tailLightMaterial = new MeshStandardMaterial({ name: 'lightBack' })
+        const loadedModel = new Group()
+        loadedModel.add(new Mesh(new BoxGeometry(), headlightMaterial), new Mesh(new BoxGeometry(), tailLightMaterial))
+
+        enableVehicleGlow(loadedModel.clone())
+
+        assert.equal(headlightMaterial.emissive.getHex(), 0xfff2d0)
+        assert.equal(headlightMaterial.emissiveIntensity, 2)
+        assert.equal(tailLightMaterial.emissive.getHex(), 0xff3030)
+        assert.equal(tailLightMaterial.emissiveIntensity, 1.5)
     })
 
     it('detects headlights in every vehicle GLB except the race cars', async () => {

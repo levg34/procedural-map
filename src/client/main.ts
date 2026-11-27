@@ -41,7 +41,7 @@ import {
     type ShowcasePlacement
 } from './showcase'
 import { createRoadsideLampPlacements } from './streetLamps'
-import { enableHeadlightGlow, enableTailLightGlow, hasHeadlights } from './vehicleLights'
+import { enableVehicleGlow, hasHeadlights } from './vehicleLights'
 import { createTrafficSimulation, type LoadedTrafficVehicleModel, type VehicleFactory } from './trafficSimulation'
 import { createRoadCenterPath } from './vehiclePath'
 
@@ -151,9 +151,8 @@ async function initializeAmbulance(): Promise<void> {
 }
 
 function addVehicleLights(vehicle: Group, placement: HeadlightPlacement = defaultHeadlightPlacement): void {
-    enableTailLightGlow(vehicle)
+    enableVehicleGlow(vehicle)
     if (!hasHeadlights(vehicle)) return
-    enableHeadlightGlow(vehicle)
 
     for (const x of [-placement.halfWidth, placement.halfWidth]) {
         const target = new Object3D()
@@ -303,6 +302,11 @@ async function initializeRoad(): Promise<void> {
         loadedRoadModels = roadCatalog
         roadPreview.reset()
         const trafficVehicleModels = loadedVehicleModels.filter((model) => !isTrafficVehicleExcluded(model.name))
+        // Clones share materials with the loaded GLTF. Glow every potential swap
+        // model once on a throwaway clone so respawns never lose head/tail glow.
+        for (const model of trafficVehicleModels) {
+            enableVehicleGlow(model.model.scene.clone())
+        }
 
         const showcasePathNames = new Set(road.map((segment) => segment.name))
         const showcaseDisplayModels = isShowcase
