@@ -1,6 +1,13 @@
 import { Vector3 } from 'three'
 import type { RoadSegment } from '../data/models'
 
+// Angled toward the road from each side, keeping headlights off the neighboring
+// display row while leaving the tail lights visible.
+export const showcaseVehicleRotations = {
+    left: -Math.PI / 4,
+    right: Math.PI / 4
+}
+
 export type ShowcasePlacement = {
     position: Vector3
     rotation: number

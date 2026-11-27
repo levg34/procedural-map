@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'vitest'
-import { createShowcasePlacements, isShowcaseProp } from '../src/client/showcase'
+import { createShowcasePlacements, isShowcaseProp, showcaseVehicleRotations } from '../src/client/showcase'
 import { streetLightHeads } from '../src/data/lights'
 import { Road } from '../src/server/roadBuilder'
 import { getAllVehicleModels } from '../src/server/utils'
@@ -27,6 +27,22 @@ describe('showcase props', () => {
         assert.equal(streetLightHeads['light_curved']?.[0]?.z, 0.15)
         assert.equal(streetLightHeads['light_curvedCross']?.length, 4)
         assert.equal(streetLightHeads['light_square']?.[0]?.y, 0.575)
+    })
+
+    it('should angle parked vehicles toward the road from both sides', async () => {
+        const road = await Road.buildShowcase()
+        const placements = createShowcasePlacements(road.getPath(), 4, {
+            offset: 1.7,
+            rotation: showcaseVehicleRotations
+        })
+
+        assert.deepStrictEqual(showcaseVehicleRotations, { left: -Math.PI / 4, right: Math.PI / 4 })
+        for (const [index, placement] of placements.entries()) {
+            assert.equal(
+                placement.rotation,
+                index % 2 === 0 ? showcaseVehicleRotations.left : showcaseVehicleRotations.right
+            )
+        }
     })
 
     it('should park vehicles in separate lanes clear of the road', async () => {

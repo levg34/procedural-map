@@ -27,7 +27,7 @@ import type { RoadModel, RoadSegment } from '../data/models'
 import { isTrafficVehicleExcluded } from '../data/vehicles'
 import { getRoad, getRoadParts, getRoadQuery, getRoadShowcase, getVehicleModels } from './api'
 import { createGrassGround } from './ground'
-import { createShowcasePlacements, isShowcaseProp } from './showcase'
+import { createShowcasePlacements, isShowcaseProp, showcaseVehicleRotations } from './showcase'
 import { createRoadsideLampPlacements } from './streetLamps'
 import { enableHeadlightGlow, enableTailLightGlow, hasHeadlights } from './vehicleLights'
 import { createTrafficSimulation, type LoadedTrafficVehicleModel, type VehicleFactory } from './trafficSimulation'
@@ -249,7 +249,10 @@ function addRoadsideLamps(centerPath: ReturnType<typeof createRoadCenterPath>): 
 }
 
 function addParkedVehicles(road: RoadSegment[], vehicleModels: LoadedTrafficVehicleModel[]): PointLight[] {
-    const placements = createShowcasePlacements(road, vehicleModels.length, { offset: 1.7, rotation: 0 })
+    const placements = createShowcasePlacements(road, vehicleModels.length, {
+        offset: 1.7,
+        rotation: showcaseVehicleRotations
+    })
     const beaconLights: PointLight[] = []
 
     vehicleModels.forEach((model, index) => {
