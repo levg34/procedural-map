@@ -282,6 +282,9 @@ export function createTrafficSimulation(options: TrafficSimulationOptions): Traf
             vehicle.object.add(visual)
             vehicle.visual = visual
             vehicle.modelName = replacement.name
+            const desiredSpeed = speed(replacement)
+            vehicle.desiredSpeed = desiredSpeed
+            vehicle.actualSpeed = desiredSpeed
         }
 
         vehicle.progress = clearProgress(
