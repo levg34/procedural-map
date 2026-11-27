@@ -25,13 +25,6 @@ createCameraRig({ scene, domElement, cameraHint })
 
 That would remove camera state from `main.ts` and make it directly testable.
 
-### Road-preview controller
-
-`models` in `main.ts` mixes the loaded road catalog with preview state (`index`,
-`current`), and `loadRoadPreview()` recurses to wrap around. A small
-`roadPreview.ts` controller would keep the catalog immutable and make wraparound
-explicit.
-
 ### Model variety on respawn
 
 `respawnVehicle()` now reuses the same vehicle object so the scene's light counts

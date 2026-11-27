@@ -30,6 +30,7 @@ import { isTrafficVehicleExcluded } from '../data/vehicles'
 import { getRoad, getRoadParts, getRoadQuery, getRoadShowcase, getVehicleModels } from './api'
 import { createGrassGround } from './ground'
 import { getRoadBounds } from './roadBounds'
+import { createRoadPreview } from './roadPreview'
 import {
     createShowcasePlacements,
     isShowcaseDisplayModel,
@@ -55,15 +56,10 @@ type LoadedRoadModel = RoadModel & {
     model: GLTF
 }
 
-const models: {
-    road: LoadedRoadModel[]
-    index?: number
-    current?: Object3D
-} = {
-    road: []
-}
+let loadedRoadModels: LoadedRoadModel[] = []
 
 const scene = new Scene()
+const roadPreview = createRoadPreview(scene, () => loadedRoadModels)
 const camera = new PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000)
 camera.position.set(5, 5, 5)
 
@@ -281,8 +277,8 @@ function addShowcaseProps(displayModels: LoadedRoadModel[], placements: Showcase
 
 function addRoadsideLamps(centerPath: ReturnType<typeof createRoadCenterPath>): void {
     const lampModel =
-        models.road.find((model) => model.name === 'light_curved') ??
-        models.road.find((model) => model.name.startsWith('light_'))
+        loadedRoadModels.find((model) => model.name === 'light_curved') ??
+        loadedRoadModels.find((model) => model.name.startsWith('light_'))
     if (!lampModel) return
 
     for (const placement of createRoadsideLampPlacements(centerPath)) {
@@ -315,28 +311,6 @@ function addParkedVehicles(road: RoadSegment[], vehicleModels: LoadedTrafficVehi
 
 void initializeAmbulance()
 
-function loadRoadPreview(): void {
-    if (models.road.length === 0) return
-
-    const index = models.index
-    if (index === undefined) return
-
-    if (index > 0 && models.current) {
-        scene.remove(models.current)
-    }
-
-    const roadElement = models.road[index]
-    if (!roadElement) {
-        models.index = 0
-        loadRoadPreview()
-        return
-    }
-
-    models.current = roadElement.model.scene
-    scene.add(models.current)
-    models.index = index + 1
-}
-
 async function initializeRoad(): Promise<void> {
     try {
         const [roadModels, availableVehicleModels, road] = await Promise.all([
@@ -344,7 +318,7 @@ async function initializeRoad(): Promise<void> {
             getVehicleModels(),
             isShowcase ? getRoadShowcase() : getRoad(roadLength, roadSeed)
         ])
-        const [loadedRoadModels, loadedVehicleModels] = await Promise.all([
+        const [roadCatalog, loadedVehicleModels] = await Promise.all([
             Promise.all(
                 roadModels.map(async (roadModel) => ({
                     ...roadModel,
@@ -358,13 +332,13 @@ async function initializeRoad(): Promise<void> {
                 }))
             )
         ])
-        models.road = loadedRoadModels
+        loadedRoadModels = roadCatalog
+        roadPreview.reset()
         const trafficVehicleModels = loadedVehicleModels.filter((model) => !isTrafficVehicleExcluded(model.name))
-        models.index = 0
 
         const showcasePathNames = new Set(road.map((segment) => segment.name))
         const showcaseDisplayModels = isShowcase
-            ? models.road.filter((model) => isShowcaseDisplayModel(model.name, showcasePathNames))
+            ? roadCatalog.filter((model) => isShowcaseDisplayModel(model.name, showcasePathNames))
             : []
         const displayPlacements = isShowcase
             ? createShowcasePlacements(
@@ -393,7 +367,7 @@ async function initializeRoad(): Promise<void> {
         }
         simulation.start(centerPath, reversePath, trafficVehicleModels)
         road.forEach((segment: RoadSegment) => {
-            const roadModel = models.road.find((model) => segment.name === model.name)
+            const roadModel = roadCatalog.find((model) => segment.name === model.name)
             if (!roadModel) throw new Error(`Missing road model: ${segment.name}`)
 
             const roadPart = new Object3D()
@@ -449,7 +423,7 @@ animate()
 
 document.addEventListener('keydown', (event) => {
     const key = event.key.toLowerCase()
-    if (key === ' ') loadRoadPreview()
+    if (key === ' ') roadPreview.showNext()
     if (isShowcase && key === 'c' && !event.repeat) toggleCameraMode()
     if (isShowcase && key === 'l' && !event.repeat) toggleLabels()
 })
