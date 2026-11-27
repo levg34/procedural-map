@@ -274,10 +274,10 @@ export function createTrafficSimulation(options: TrafficSimulationOptions): Traf
     function respawnVehicle(vehicle: TrafficVehicle): void {
         // Reuse the same object and lights: adding/removing lights changes the
         // shader program cache key and freezes the page on recompilation. Only
-        // the GLB clone is replaced, and only by a model with the same signature.
-        // Draw from the whole signature group, including the current model: a
-        // self-loop keeps the stationary distribution equal to `weight`, whereas
-        // excluding it forces alternation in two-model groups and skews rarities.
+        // the GLB clone is replaced, and only by a model with the same light config.
+        // Draw from the whole config group, including the current model: a self-loop
+        // keeps the stationary distribution equal to `weight`, whereas excluding it
+        // forces alternation in two-model groups and skews rarities.
         const candidates = modelGroups.get(vehicle.lightConfigKey) ?? []
         if (vehicle.visual && candidates.length > 0) {
             const replacement = pickWeighted(candidates, weight, random)
