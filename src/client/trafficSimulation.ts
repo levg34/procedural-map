@@ -5,7 +5,7 @@ import { getTrafficVehicleSpeed, getTrafficVehicleWeight } from '../data/vehicle
 import { getLanePosition, getTurnaroundPose, type RoadPath } from './vehiclePath'
 
 const vehicleYOffset = 0.02
-const blinkInterval = 30
+const blinkIntervalSeconds = 0.5
 const defaultMinimumGap = 1
 const defaultAmbulanceSpeed = 2
 const followGain = 1
@@ -155,7 +155,7 @@ export function createTrafficSimulation(options: TrafficSimulationOptions): Traf
     let ambulanceProgress = 0
     let ambulanceReturning = false
     let ambulanceTurnProgress: number | undefined
-    let blinkCounter = 0
+    let blinkElapsed = 0
 
     const trafficVehicles: TrafficVehicle[] = []
 
@@ -345,16 +345,20 @@ export function createTrafficSimulation(options: TrafficSimulationOptions): Traf
         }
     }
 
-    function updateBeacons(): void {
-        blinkCounter++
-        if (blinkCounter < blinkInterval) return
+    function updateBeacons(deltaTime: number): void {
+        blinkElapsed += deltaTime
+        const intervals = Math.floor(blinkElapsed / blinkIntervalSeconds)
+        if (intervals === 0) return
+
+        blinkElapsed -= intervals * blinkIntervalSeconds
+        // A long frame can span several intervals; only an odd count flips state.
+        if (intervals % 2 === 0) return
 
         toggleBeacons(ambulanceBeaconLights)
         toggleBeacons(parkedBeaconLights)
         for (const vehicle of trafficVehicles) {
             toggleBeacons(vehicle.beaconLights)
         }
-        blinkCounter = 0
     }
 
     return {
@@ -389,7 +393,7 @@ export function createTrafficSimulation(options: TrafficSimulationOptions): Traf
             const steps = Math.max(1, Math.ceil(deltaTime / maxStepDuration))
             const step = deltaTime / steps
             for (let index = 0; index < steps; index++) updateMovement(step)
-            updateBeacons()
+            updateBeacons(deltaTime)
         }
     }
 }

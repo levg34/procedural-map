@@ -112,21 +112,52 @@ describe('traffic simulation', () => {
         assert.ok(maxZ <= 10)
     })
 
-    it('blinks beacons every 30 updates', () => {
-        const { simulation } = createSetup()
+    it('blinks every beacon on a fixed time interval', () => {
+        const vehicleBeacon = new PointLight()
+        const { simulation } = createSetup({
+            reverseTrafficVehicleCount: 1,
+            forwardTrafficVehicleCount: 0,
+            createVehicle: () => ({ object: new Group(), beaconLights: [vehicleBeacon] })
+        })
         const ambulanceBeacon = new PointLight()
         const parkedBeacon = new PointLight()
         simulation.setAmbulance(new Group(), [ambulanceBeacon])
         simulation.addParkedBeaconLights([parkedBeacon])
         simulation.start(straightPath(), straightPath(10, 0), [vehicleModel('car')])
 
-        for (let i = 0; i < 29; i++) simulation.update(0)
+        simulation.update(0.25)
         assert.strictEqual(ambulanceBeacon.visible, true)
         assert.strictEqual(parkedBeacon.visible, true)
+        assert.strictEqual(vehicleBeacon.visible, true)
 
-        simulation.update(0)
+        simulation.update(0.25)
         assert.strictEqual(ambulanceBeacon.visible, false)
         assert.strictEqual(parkedBeacon.visible, false)
+        assert.strictEqual(vehicleBeacon.visible, false)
+    })
+
+    it('blinks at the same rate regardless of the number of updates', () => {
+        const { simulation } = createSetup()
+        const beacon = new PointLight()
+        simulation.setAmbulance(new Group(), [beacon])
+        simulation.start(straightPath(), straightPath(10, 0), [vehicleModel('car')])
+
+        for (let index = 0; index < 4; index++) simulation.update(1 / 8)
+
+        assert.strictEqual(beacon.visible, false)
+    })
+
+    it('preserves blink phase when a frame spans multiple intervals', () => {
+        const { simulation } = createSetup()
+        const beacon = new PointLight()
+        simulation.setAmbulance(new Group(), [beacon])
+        simulation.start(straightPath(), straightPath(10, 0), [vehicleModel('car')])
+
+        simulation.update(1)
+        assert.strictEqual(beacon.visible, true)
+
+        simulation.update(0.5)
+        assert.strictEqual(beacon.visible, false)
     })
 
     it('keeps the scene light count constant across respawns', () => {

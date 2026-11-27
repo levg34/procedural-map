@@ -48,13 +48,6 @@ counts, pick replacements from the same group, and apply the weights from
 unused lights — that removes them from the renderer's count and reintroduces the
 freeze; use `intensity = 0` instead.
 
-### Time-based beacon blinking
-
-`trafficSimulation.ts` still blinks beacons on a frame counter, so the blink rate
-changes with FPS. Replacing `blinkCounter` with a time accumulator (e.g.
-`blinkElapsed += deltaTime`) would make it predictable. This was deliberately left
-as-is during extraction to preserve existing behavior.
-
 ### Vehicle pose constants
 
 `VEHICLE_SCALE = 0.2`, the `0.02` Y lift, and the `-0.75` GLB Z offset are
